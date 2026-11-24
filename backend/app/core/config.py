@@ -49,6 +49,17 @@ class Settings(BaseSettings):
 
     # eBay Browse API (application credentials, admin configured)
     ebay_marketplace: str = "EBAY_CH"
+    # Official Galaxus MCP interface (also covers Digitec's catalogue). No key needed.
+    galaxus_enabled: bool = True
+    # Inbox for Ricardo / tutti saved-search alert mails (IMAP, a mailbox only for Schnäppli).
+    inbox_imap_host: str = ""
+    inbox_imap_port: int = 993
+    inbox_imap_user: str = ""
+    inbox_imap_folder: str = "INBOX"
+    # Which account the alerts belong to (e-mail of a Schnäppli user). Empty = the first admin.
+    inbox_owner_email: str = ""
+    # Optional: only accept alerts forwarded from these sender addresses (comma-separated).
+    inbox_allowed_senders: str = ""
     ebay_environment: str = "production"
 
     # Shared AI provider configured by the administrator (optional).
@@ -105,6 +116,10 @@ class Settings(BaseSettings):
     @property
     def telegram_bot_token(self) -> str | None:
         return _read_secret("TELEGRAM_BOT_TOKEN")
+
+    @property
+    def inbox_password(self) -> str | None:
+        return _read_secret("INBOX_PASSWORD")
 
     @property
     def telegram_webhook_secret(self) -> str | None:

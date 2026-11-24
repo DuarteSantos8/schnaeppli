@@ -36,26 +36,61 @@ robots.txt allows automated access, and extracts the structured product data sho
 publish (schema.org JSON-LD, then OpenGraph). Works with most retailers. If a site
 refuses automated access, Schnäppli says so; it doesn't retry around it.
 
-## Ricardo (not supported)
+## Galaxus and Digitec (supported) {#galaxus}
 
-Ricardo's API is for contracted sellers and partners and doesn't offer search; the
-robots.txt disallows automated search pages. **Planned alternative:** an inbox adapter
-that reads Ricardo's own saved-search alert e-mails that you forward to Schnäppli.
+Through Galaxus' **official MCP interface for AI assistants** (`https://mcp.galaxus.ch`,
+opened November 2026): no account or key, the shop's own product database, one tool
+(`search_products`). Digitec shares the catalogue. The websites themselves block
+automated clients, and Schnäppli never visits them.
 
-## tutti.ch (not supported)
+Results are new retail products with current prices incl. VAT (no stock or delivery
+times). Schnäppli also hands those prices to the analysis as the new-price reference
+for used listings of the same search. Searches set to "used only" skip this source. A
+price floor of a fifth of the budget keeps accessories out of searches for the main
+item. Turn it off with `SCHNAEPPLI_GALAXUS_ENABLED=false`.
 
-No public API; robots.txt disallows the API and listing paths. Same planned
-alternative as Ricardo.
+## Ricardo and tutti.ch (through their alert e-mails) {#alerts}
+
+Neither has a public search API, and both turn automated clients away (Ricardo
+answers 403; tutti's robots.txt closes listing pages). What both offer is a saved
+search that e-mails new listings. Schnäppli reads those mails from a mailbox of its
+own over IMAP, every five minutes, takes the listings out (link, title, price,
+photo) and puts them into the matching search. It doesn't open the listing pages.
+
+Setup (administrator, once):
+
+1. Create a mailbox only for Schnäppli, e.g. `schnaeppli@your-domain`, and an app
+   password for it. Don't use your personal mailbox: Schnäppli marks mails as read.
+2. In `.env`: `SCHNAEPPLI_INBOX_IMAP_HOST` (e.g. `imappro.zoho.eu`),
+   `SCHNAEPPLI_INBOX_IMAP_USER` (the address). Put the app password into
+   `secrets/inbox_password`. Optional: `SCHNAEPPLI_INBOX_OWNER_EMAIL` (whose account the
+   alerts belong to; default the first admin) and `SCHNAEPPLI_INBOX_ALLOWED_SENDERS`.
+3. `docker compose up -d`.
+
+Then, as the user:
+
+1. In the mailbox your Ricardo / tutti accounts use, add a filter that forwards mails
+   from `ricardo.ch` and `tutti.ch` to Schnäppli's address.
+2. On each search, Schnäppli shows ready-made Ricardo and tutti links. Open them and
+   save the search there.
+
+Routing: a listing goes to the search whose own search terms best match the saved
+search's name and the listing title. Listings that fit no active search are skipped
+and counted. If alert mails stop yielding listings (layout changes), Settings →
+Sources says so.
+
+Limits: only listings that appear after the saved search was created arrive, and the
+analysis has the alert's title, price and photo, not the full description.
 
 ## Facebook Marketplace (not supported)
 
 No API, and Meta's terms prohibit automated collection. No permitted alternative is
 known.
 
-## Digitec, Galaxus, Interdiscount, Toppreise (no search)
+## Interdiscount, Toppreise (no search)
 
-No public product search APIs. Single product pages can be added by link where
-robots.txt allows.
+No public product search APIs (Interdiscount's robots.txt also closes its search pages).
+Single product pages can be added by link where robots.txt allows.
 
 ## Amazon (planned)
 

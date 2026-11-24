@@ -254,12 +254,24 @@ export interface WishItem {
   created_at: string;
 }
 
+export interface InboxInfo {
+  configured: boolean;
+  address: string | null;
+  checked_at: string | null;
+  last_alert_at: string | null;
+  totals: Record<string, number>;
+  unrouted: number;
+  unreadable: number;
+  ok: boolean | null;
+  error?: string | null;
+}
+
 export interface SourceInfo {
   id: string;
   name: string;
   kind: string;
   homepage: string;
-  state: "ready" | "needs_credentials" | "unsupported" | "planned" | "manual";
+  state: "ready" | "needs_credentials" | "unsupported" | "planned" | "manual" | "alerts";
   reason: string;
   alternatives: string | null;
   available: boolean;

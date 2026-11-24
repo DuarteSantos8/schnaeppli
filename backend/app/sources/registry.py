@@ -4,35 +4,55 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from app.sources.base import SourceAdapter, UnsupportedSource
+from app.sources.base import SourceAdapter, SourceStatus, UnsupportedSource
 from app.sources.ebay import EbayAdapter
+from app.sources.galaxus import GalaxusAdapter
 
 _EMAIL_ALT = (
-    "Planned: forward the site's own saved-search alert e-mails to Schnäppli's inbox "
-    "adapter, or add single listings by link."
+    "Works through the site's own saved-search e-mails: save the search there once, "
+    "and Schnäppli reads the alert mails from its inbox (Settings → Sources)."
 )
+
+
+class AlertSource(SourceAdapter):
+    """A marketplace reached through its own alert e-mails (see sources/inbox.py)."""
+
+    kind = "secondhand"
+
+    def __init__(self, id: str, name: str, homepage: str, why: str):
+        self.id, self.name, self.homepage, self._why = id, name, homepage, why
+
+    def status(self) -> SourceStatus:
+        from app.sources import inbox
+
+        if inbox.configured():
+            return SourceStatus("alerts", self._why, alternatives=_EMAIL_ALT)
+        return SourceStatus(
+            "needs_credentials",
+            self._why,
+            alternatives="Needs a mailbox for the alert e-mails, set up by the administrator "
+            "(see docs/marketplaces.md).",
+        )
 
 
 @lru_cache
 def all_sources() -> dict[str, SourceAdapter]:
     sources: list[SourceAdapter] = [
         EbayAdapter(),
-        UnsupportedSource(
+        GalaxusAdapter(),
+        AlertSource(
             "ricardo",
             "Ricardo",
-            "secondhand",
             "https://www.ricardo.ch",
-            "Ricardo's API is for contracted sellers and partners, not for search, and its robots.txt "
-            "disallows automated search pages.",
-            _EMAIL_ALT,
+            "No public search API (the API is for contracted sellers), and the site blocks automated "
+            "clients, so Schnäppli reads Ricardo's own saved-search e-mails instead.",
         ),
-        UnsupportedSource(
+        AlertSource(
             "tutti",
             "tutti.ch",
-            "secondhand",
             "https://www.tutti.ch",
-            "No public API; robots.txt disallows the API and listing paths for automated clients.",
-            _EMAIL_ALT,
+            "No public API, and its robots.txt closes listing pages to automated clients, so Schnäppli "
+            "reads tutti's own saved-search e-mails instead.",
         ),
         UnsupportedSource(
             "facebook",
@@ -43,27 +63,11 @@ def all_sources() -> dict[str, SourceAdapter]:
             "No permitted alternative is known.",
         ),
         UnsupportedSource(
-            "digitec",
-            "Digitec",
-            "retail",
-            "https://www.digitec.ch",
-            "No public product search API.",
-            "Add single products by link (robots.txt permitting).",
-        ),
-        UnsupportedSource(
-            "galaxus",
-            "Galaxus",
-            "retail",
-            "https://www.galaxus.ch",
-            "No public product search API.",
-            "Add single products by link (robots.txt permitting).",
-        ),
-        UnsupportedSource(
             "interdiscount",
             "Interdiscount",
             "retail",
             "https://www.interdiscount.ch",
-            "No public product search API.",
+            "No public product search API, and its robots.txt closes search pages to automated clients.",
             "Add single products by link (robots.txt permitting).",
         ),
         UnsupportedSource(

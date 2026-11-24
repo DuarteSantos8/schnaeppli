@@ -49,6 +49,10 @@ Compose file passes them.
 | `POSTGRES_PASSWORD` | — | Required. |
 | `SCHNAEPPLI_BIND` | `127.0.0.1:8080` | Where the web container is published. Keep it on a private address. |
 | `SCHNAEPPLI_PROXY_NETWORK` | `schnaeppli-proxy` | Docker network shared with your reverse proxy. |
+| `SCHNAEPPLI_GALAXUS_ENABLED` | `true` | Search Galaxus/Digitec through Galaxus' official MCP interface. |
+| `SCHNAEPPLI_INBOX_IMAP_HOST` / `_PORT` / `_USER` / `_FOLDER` | – / `993` / – / `INBOX` | Mailbox for Ricardo and tutti alert mails. Password in `secrets/inbox_password`. |
+| `SCHNAEPPLI_INBOX_OWNER_EMAIL` | first admin | Account the alert listings belong to. |
+| `SCHNAEPPLI_INBOX_ALLOWED_SENDERS` | any | Only accept mails from these addresses (plus ricardo.ch / tutti.ch). |
 | `BACKUP_DIR` | `./backups` | Database dumps. |
 | `BACKUP_KEEP_DAYS` | `14` | Retention. |
 | `BACKUP_HOUR` | `3` | Hour the dumps are aligned to (container time, UTC). |

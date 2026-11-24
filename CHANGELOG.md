@@ -13,6 +13,11 @@ First version.
   start page; which sections Home shows; the four phone tabs.
 - Own pickers instead of the platform's select wheels, with a filter for long lists.
 - API keys, setup tokens and invite codes no longer trigger password autofill.
+- Galaxus and Digitec through Galaxus' official MCP interface; their prices also
+  serve as the new-price reference for used listings.
+- Ricardo and tutti through their own saved-search e-mails: an IMAP inbox adapter,
+  ready-made links on each search, status in Settings → Sources.
+  Existing installs: `touch secrets/inbox_password` before `docker compose up`.
 - Crash recovery: the worker notices when the server was offline, restarts
   interrupted search runs, catches up overdue searches, sends missed digests late
   and reports the outage to administrators (Telegram and Home).

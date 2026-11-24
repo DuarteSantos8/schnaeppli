@@ -37,7 +37,7 @@ Secrets are mounted as files and never appear in environment variables.
 ```bash
 mkdir -p secrets && chmod 700 secrets
 echo "k1:$(openssl rand -base64 32)" > secrets/encryption_keys   # encrypts users' API keys
-touch secrets/telegram_bot_token secrets/ebay_client_id secrets/ebay_client_secret secrets/claude_code_bridge_secret
+touch secrets/telegram_bot_token secrets/ebay_client_id secrets/ebay_client_secret secrets/claude_code_bridge_secret secrets/inbox_password
 chmod 644 secrets/*   # readable inside the containers; the folder itself stays private
 ```
 

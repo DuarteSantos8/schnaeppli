@@ -13,7 +13,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-SourceState = Literal["ready", "needs_credentials", "unsupported", "planned", "manual"]
+SourceState = Literal["ready", "needs_credentials", "unsupported", "planned", "manual", "alerts"]
 
 
 @dataclass

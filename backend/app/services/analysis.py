@@ -115,6 +115,25 @@ def listing_block(listing: Listing, match: SearchMatch, user: User) -> str:
     return "<untrusted_listing>\n" + "\n".join(parts) + "\n</untrusted_listing>"
 
 
+async def new_prices(db: AsyncSession, search: SearchProfile, limit: int = 8) -> list[tuple[str, float, str]]:
+    """Current retail prices the Galaxus source found for this search (cheapest first)."""
+    rows = (
+        await db.execute(
+            select(Listing.title, Listing.price, Listing.currency)
+            .join(SearchMatch, SearchMatch.listing_id == Listing.id)
+            .where(
+                SearchMatch.search_id == search.id,
+                Listing.source == "galaxus",
+                Listing.price.is_not(None),
+                SearchMatch.relevance.not_in(("irrelevant", "accessory")),
+            )
+            .order_by(Listing.price)
+            .limit(limit)
+        )
+    ).all()
+    return [(t[:80], float(p), c) for t, p, c in rows]
+
+
 async def comparables(
     db: AsyncSession, search: SearchProfile, product: str | None, exclude: uuid.UUID
 ) -> list[float]:
@@ -222,6 +241,14 @@ async def analyze_match(db: AsyncSession, match_id: uuid.UUID, *, deep: bool = F
         ),
         max_tokens=3000 if deep else 1800,
     )
+    if listing.source != "galaxus":
+        retail = await new_prices(db, search)
+        if retail:
+            prompt.user += (
+                "\n\nNew-in-shop reference (Galaxus/Digitec, current retail prices incl. VAT, for the "
+                "products this search found there; a used item should normally cost clearly less than "
+                "the same item new): " + "; ".join(f"{t} = {p:.0f} {c}" for t, p, c in retail)
+            )
     if deep:
         comps = await comparables(db, search, (listing.identity or {}).get("product"), listing.id)
         if comps:

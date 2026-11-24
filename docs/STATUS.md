@@ -53,8 +53,9 @@ Last updated 2026-11-24 (v0.1.0). Legend: ✅ done and tested ·
 | --- | --- |
 | eBay Browse API | 🟡 implemented, needs keys; EBAY_CH search coverage to verify |
 | Add by link (JSON-LD/OpenGraph, robots.txt) | ✅ parser tested; live sites vary |
-| Ricardo, tutti.ch (inbox adapter for alert e-mails) | ⬜ planned |
-| Facebook, Digitec, Galaxus, Interdiscount, Toppreise | shown as unsupported with reasons |
+| Galaxus / Digitec (official MCP) | ✅ verified live 2026-11-24 |
+| Ricardo, tutti.ch (inbox adapter for alert e-mails) | 🟡 implemented and tested with synthetic mails; real alert layouts to verify |
+| Facebook, Interdiscount, Toppreise | shown as unsupported with reasons |
 | Amazon PA-API | ⬜ planned |
 
 ## Platform

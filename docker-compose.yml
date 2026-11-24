@@ -21,7 +21,8 @@ x-backend: &backend
     SCHNAEPPLI_EBAY_CLIENT_ID_FILE: /run/secrets/ebay_client_id
     SCHNAEPPLI_EBAY_CLIENT_SECRET_FILE: /run/secrets/ebay_client_secret
     SCHNAEPPLI_CLAUDE_CODE_BRIDGE_SECRET_FILE: /run/secrets/claude_code_bridge_secret
-  secrets: [encryption_keys, telegram_bot_token, ebay_client_id, ebay_client_secret, claude_code_bridge_secret]
+    SCHNAEPPLI_INBOX_PASSWORD_FILE: /run/secrets/inbox_password
+  secrets: [encryption_keys, telegram_bot_token, ebay_client_id, ebay_client_secret, claude_code_bridge_secret, inbox_password]
   networks: [internal, egress]
   read_only: true
   tmpfs: [/tmp]
@@ -121,6 +122,7 @@ secrets:
   ebay_client_id: { file: ./secrets/ebay_client_id }
   ebay_client_secret: { file: ./secrets/ebay_client_secret }
   claude_code_bridge_secret: { file: ./secrets/claude_code_bridge_secret }
+  inbox_password: { file: ./secrets/inbox_password }
 
 volumes:
   db:

@@ -76,9 +76,10 @@ Schnäppli only uses official APIs and permitted access. It doesn't scrape sites
 | --- | --- | --- |
 | eBay | ✅ Supported | Official Browse API. Needs a free eBay developer key. Asking prices, not sold prices. |
 | Any shop, by link | ✅ Supported | Paste a link; Schnäppli reads it once if robots.txt allows and the shop publishes product data. |
-| Ricardo, tutti.ch | ❌ Not supported | No public search API; robots.txt disallows automated search. Planned: read the sites' own saved-search alert e-mails. |
+| Galaxus, Digitec | ✅ Supported | Galaxus' official interface for AI assistants. New products and current prices; also the new-price reference for used listings. |
+| Ricardo, tutti.ch | ✅ Via alert e-mails | No search API and they block bots, so Schnäppli reads their own saved-search mails from its mailbox. |
 | Facebook Marketplace | ❌ Not supported | No API, and automated collection is prohibited. |
-| Digitec, Galaxus, Interdiscount, Toppreise | ❌ No search | No public product API. Single products can be added by link. |
+| Interdiscount, Toppreise | ❌ No search | No public product API. Single products can be added by link. |
 | Amazon | 🕓 Planned | The product API needs an Associates account with sales. |
 
 Details in [docs/marketplaces.md](docs/marketplaces.md).
@@ -92,7 +93,7 @@ git clone https://github.com/<you>/schnaeppli.git && cd schnaeppli
 cp .env.example .env            # set POSTGRES_PASSWORD, SCHNAEPPLI_PUBLIC_URL, SCHNAEPPLI_SETUP_TOKEN
 mkdir -p secrets && chmod 700 secrets
 echo "k1:$(openssl rand -base64 32)" > secrets/encryption_keys
-touch secrets/telegram_bot_token secrets/ebay_client_id secrets/ebay_client_secret secrets/claude_code_bridge_secret
+touch secrets/telegram_bot_token secrets/ebay_client_id secrets/ebay_client_secret secrets/claude_code_bridge_secret secrets/inbox_password
 docker compose up -d --build
 ```
 

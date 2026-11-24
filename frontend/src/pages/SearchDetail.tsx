@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Link2, Play } from "lucide-react";
+import { ArrowLeft, ExternalLink, Link2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DealCard, DealGridSkeleton } from "@/components/deal";
 import { FormActions, SearchForm, type SearchValues } from "@/components/SearchForm";
-import { Button, Chip, Empty, ErrorBox, Field, Input, Panel, Pill, Segmented, Sheet, Skeleton, useToast } from "@/components/ui";
+import { Button, Chip, Empty, ErrorBox, Field, Input, Notice, Panel, Pill, Segmented, Sheet, Skeleton, useToast } from "@/components/ui";
 import { get, patch, post } from "@/lib/api";
 import { dayTime, money, relTime, SOURCE_NAME } from "@/lib/format";
-import type { Deal, DealDetail, Search } from "@/lib/types";
+import type { Deal, DealDetail, InboxInfo, Search } from "@/lib/types";
 import { SearchMenu, StatusPill } from "./Searches";
+import { useMe } from "@/lib/auth";
 
 interface Run {
   id: string;
@@ -51,6 +52,55 @@ function AddByLink({ searchId, open, onOpenChange }: { searchId: string; open: b
       </Field>
       {m.error ? <div className="mt-3"><ErrorBox error={m.error} /></div> : null}
     </Sheet>
+  );
+}
+
+/** The searches to save on Ricardo and tutti, so their alert mails reach Schnäppli. */
+function AlertLinks({ s }: { s: Search }) {
+  const me = useMe();
+  const inbox = useQuery({ queryKey: ["inbox"], queryFn: () => get<InboxInfo>("/api/sources/inbox"), staleTime: 300_000 });
+  const key = `schnaeppli.alerts-done.${s.id}`;
+  const [done, setDone] = useState(() => localStorage.getItem(key) === "1");
+  if (!inbox.data || done || s.status !== "active") return null;
+  if (!inbox.data.configured) {
+    if (!me.is_admin) return null;
+    return (
+      <div className="mb-4">
+        <Notice action={<Link to="/settings/sources"><Button size="sm">Set up</Button></Link>}>
+          Ricardo and tutti can feed this search through their own alert e-mails once Schnäppli has a mailbox for them.
+        </Notice>
+      </div>
+    );
+  }
+  const terms = (s.spec.queries?.length ? s.spec.queries : [s.title]).slice(0, 3);
+  return (
+    <Panel className="mb-4 px-4 py-4 sm:px-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 max-w-prose">
+          <h2 className="text-[0.9375rem] font-semibold">Also watch Ricardo and tutti</h2>
+          <p className="mt-1 text-[0.8125rem] text-muted">
+            Open each search and save it there (Ricardo: “Suche speichern”, tutti: “Suchauftrag speichern”). Their alert
+            mails are forwarded to {inbox.data.address ? <span className="font-medium text-ink">{inbox.data.address}</span> : "Schnäppli's inbox"}, and new listings show up here, scored.
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => { localStorage.setItem(key, "1"); setDone(true); }}>Done</Button>
+      </div>
+      <ul className="mt-3 divide-y divide-rule">
+        {terms.map((t) => (
+          <li key={t} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span className="min-w-0 truncate text-sm">{t}</span>
+            <span className="flex gap-2">
+              <a className="pressable inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] bg-raised px-3 text-[0.8125rem] font-medium hover:bg-raised-hover" href={`https://www.ricardo.ch/de/s/${encodeURIComponent(t)}`} target="_blank" rel="noreferrer noopener">
+                Ricardo <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+              <a className="pressable inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] bg-raised px-3 text-[0.8125rem] font-medium hover:bg-raised-hover" href={`https://www.tutti.ch/de/q/suche?query=${encodeURIComponent(t)}`} target="_blank" rel="noreferrer noopener">
+                tutti <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
   );
 }
 
@@ -242,7 +292,7 @@ export default function SearchDetail() {
           ]}
         />
       </div>
-      {tab === "results" && <Results s={s} />}
+      {tab === "results" && <><AlertLinks s={s} /><Results s={s} /></>}
       {tab === "settings" && <Edit s={s} />}
       {tab === "history" && <History s={s} />}
       <AddByLink searchId={s.id} open={linkOpen} onOpenChange={setLinkOpen} />

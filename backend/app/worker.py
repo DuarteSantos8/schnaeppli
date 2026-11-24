@@ -23,9 +23,10 @@ from app.core.config import get_settings
 from app.core.db import sessionmaker, utcnow
 from app.core.logging import setup_logging
 from app.models import SearchMatch, SearchProfile, User
-from app.services import analysis, digest, notify, resilience, telegram
+from app.services import analysis, digest, inbox_import, notify, resilience, telegram
 from app.services.runner import run_search
 from app.services.schedule import digest_due, next_search_run
+from app.sources import inbox
 
 log = structlog.get_logger()
 
@@ -64,6 +65,15 @@ async def analyze_match_job(ctx, match_id: str) -> dict:
 async def digest_job(ctx, user_id: str, slot: str) -> str:
     async with sessionmaker()() as db:
         return await digest.send_digest(db, uuid.UUID(user_id), slot)
+
+
+async def inbox_job(ctx) -> int:
+    """Ricardo / tutti alert mails → matches → analysis."""
+    async with sessionmaker()() as db:
+        ids = await inbox_import.import_alerts(db)
+    for mid in ids:
+        await ctx["redis"].enqueue_job("analyze_match_job", str(mid), _job_id=f"analyze:{mid}")
+    return len(ids)
 
 
 async def tick(ctx) -> None:
@@ -113,6 +123,9 @@ async def tick(ctx) -> None:
                 await ctx["redis"].enqueue_job(
                     "digest_job", str(u.id), slot, _job_id=f"digest:{u.id}:{now:%Y%m%d}:{slot}"
                 )
+        # Alert mails from Ricardo / tutti, every 5 minutes.
+        if inbox.configured() and now.minute % 5 == 0:
+            await ctx["redis"].enqueue_job("inbox_job", _job_id=f"inbox:{now:%Y%m%d%H%M}")
         # Re-queue analyses stuck in "queued" for over an hour (e.g. after a crash).
         stale = (
             await db.scalars(
@@ -199,7 +212,7 @@ async def shutdown(ctx) -> None:
 
 
 class WorkerSettings:
-    functions = [run_search_job, analyze_match_job, digest_job]
+    functions = [run_search_job, analyze_match_job, digest_job, inbox_job]
     cron_jobs = [cron(tick, second=0, run_at_startup=True, unique=True)]
     on_startup = startup
     on_shutdown = shutdown

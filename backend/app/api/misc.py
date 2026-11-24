@@ -210,6 +210,29 @@ async def history(
 
 
 # -------------------------------------------------------------------- sources
+@router.get("/api/sources/inbox")
+async def inbox_info(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    """Where to forward Ricardo / tutti alert mails, and how the inbox is doing."""
+    from app.services import inbox_import
+    from app.sources import inbox
+
+    s = get_settings()
+    st = await inbox_import.status(db) if inbox.configured() else {}
+    out = {
+        "configured": inbox.configured(),
+        "address": s.inbox_imap_user or None,
+        "checked_at": st.get("checked_at"),
+        "last_alert_at": st.get("last_alert_at"),
+        "totals": st.get("totals", {}),
+        "unrouted": st.get("unrouted", 0),
+        "unreadable": st.get("unreadable", 0),
+        "ok": st.get("error") is None if st else None,
+    }
+    if user.is_admin:
+        out["error"] = st.get("error")
+    return out
+
+
 @router.get("/api/sources")
 async def sources(user: User = Depends(current_user)):
     out = []
