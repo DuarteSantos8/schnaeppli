@@ -1,0 +1,29 @@
+# secrets & local config
+.env
+.env.*
+!.env.example
+secrets/
+*.key
+*.pem
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+# node
+node_modules/
+frontend/dist/
+# data
+*.db
+*.sqlite
+*.dump
+backups/
+*.log
+# editors
+.DS_Store
+.idea/
+.vscode/
+.taste-skill/

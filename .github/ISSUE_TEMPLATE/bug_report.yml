@@ -1,0 +1,29 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: version
+    attributes:
+      label: Schnäppli version / commit
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [iPhone PWA, Android, Desktop browser, Telegram, Backend / worker]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Remove any personal data, tokens or keys first.
+      render: text

@@ -1,0 +1,209 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+
+/*
+  Schnäppli design tokens: style "achromatic ledger" (see docs/brand.md).
+  The chrome holds no colour. Photos bring the colour; the one hue (the accent,
+  cobalt by default) marks the Deal Score, the screen's main data element.
+  Status colours appear only as small signals where something changed.
+
+  Users can choose light/dark, an accent, density and text size
+  (Settings → Appearance). Those set data attributes on <html>, which
+  override the variables below. Spacing and type are in rem, so "Larger
+  text" scales the whole interface evenly.
+*/
+@theme {
+  --font-sans: "Geist Variable", "Geist", Inter, system-ui, -apple-system, sans-serif;
+
+  --color-ground: #f4f3f1;      /* warm stone: a shop's world */
+  --color-surface: #ffffff;
+  --color-raised: #ecebe8;
+  --color-raised-hover: #e2e0dc;
+  --color-sunk: #efeeeb;
+  --color-border: #e4e2de;
+  --color-rule: #eeece8;
+  --color-control: #d3d0cb;
+  --color-track: #d7d4ce;
+  --color-track-strong: #b9b5ae;
+  --color-ink: #0a0a0a;
+  --color-ink-2: #3d3b37;
+  --color-on-ink: #ffffff;
+  --color-muted: #66645f;
+  --color-faint: #8f8c86;
+  --color-primary: #141414;
+  --color-primary-hover: #2a2a2a;
+  --color-knob: #ffffff;
+  --color-switch-on: #141414;
+  --color-toast: #1c1c1c;
+  --color-toast-accent: #9ec0f2;
+  --color-score: #1d5fbf;       /* the one data hue */
+  --color-score-soft: #e8eef8;
+  --color-positive: #2e7d32;
+  --color-negative: #c4242a;
+  --color-warning: #92400e;
+  --color-pos-bg: #dcfae5;  --color-pos-ink: #04250e;
+  --color-neg-bg: #ffedea;  --color-neg-ink: #831c1e;
+  --color-warn-bg: #fff6e0; --color-warn-ink: #7a3a0c;
+
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-photo: 6px;
+}
+
+:root {
+  color-scheme: light;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --selection: #cddcf3;
+}
+
+/* Dark: warm near-black, never pure #000; surfaces get lighter as they rise. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ground: #121211;
+  --color-surface: #1b1b1a;
+  --color-raised: #262624;
+  --color-raised-hover: #302f2d;
+  --color-sunk: #20201e;
+  --color-border: #2c2b29;
+  --color-rule: #252523;
+  --color-control: #45433f;
+  --color-track: #3a3936;
+  --color-track-strong: #5c5a55;
+  --color-ink: #f1efeb;
+  --color-ink-2: #d3d0ca;
+  --color-on-ink: #121211;
+  --color-muted: #a3a09a;
+  --color-faint: #7f7c76;
+  --color-primary: #f1efeb;
+  --color-primary-hover: #ffffff;
+  --color-knob: #f8f7f4;
+  --color-switch-on: var(--color-score);
+  --color-toast: #2e2d2b;
+  --color-positive: #63c374;
+  --color-negative: #f0676c;
+  --color-warning: #e2a75c;
+  --color-pos-bg: #12301b;  --color-pos-ink: #bdf0c9;
+  --color-neg-bg: #3a1618;  --color-neg-ink: #ffcbc7;
+  --color-warn-bg: #352710; --color-warn-ink: #f5d9a0;
+  --selection: #2b4469;
+}
+
+/* Accents: only the data hue changes. Each pair is checked for contrast on its ground. */
+:root { --color-score: #1d5fbf; --color-score-soft: #e8eef8; }
+:root[data-accent="forest"]   { --color-score: #23784a; --color-score-soft: #e3f1e8; --selection: #cfe6d7; }
+:root[data-accent="plum"]     { --color-score: #7a3fa6; --color-score-soft: #f1e9f7; --selection: #e3d3ef; }
+:root[data-accent="ember"]    { --color-score: #bb3f0b; --color-score-soft: #fbece4; --selection: #f6d5c4; }
+:root[data-accent="graphite"] { --color-score: #3b3b42; --color-score-soft: #ebebee; --selection: #d9d9de; }
+:root[data-theme="dark"]                         { --color-score: #6a9cea; --color-score-soft: #1b2a42; }
+:root[data-theme="dark"][data-accent="forest"]   { --color-score: #5fc08a; --color-score-soft: #15301f; --selection: #1f4a30; }
+:root[data-theme="dark"][data-accent="plum"]     { --color-score: #bb93e3; --color-score-soft: #2c1f3a; --selection: #46305d; }
+:root[data-theme="dark"][data-accent="ember"]    { --color-score: #f08c5e; --color-score-soft: #3a2014; --selection: #5c3220; }
+:root[data-theme="dark"][data-accent="graphite"] { --color-score: #d0d0d8; --color-score-soft: #2a2a2e; --selection: #3e3e44; }
+
+/* Density: Tailwind derives every padding, gap and control height from --spacing. */
+:root[data-density="compact"] { --spacing: 0.215rem; }
+
+/* Larger text scales the whole interface, since sizes are in rem. */
+html { font-size: 16px; }
+:root[data-text="large"] { font-size: 17.5px; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--color-ground);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background: var(--color-ground);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+#root { min-height: 100dvh; }
+
+::selection { background: var(--selection); }
+
+:focus-visible {
+  outline: 2px solid var(--color-score);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+/* Interactive feedback: subtle press scale on things you tap. */
+.pressable {
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.pressable:active { transform: scale(0.97); }
+
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover { background-color: var(--color-sunk); }
+}
+
+/* Skeletons: one quiet shimmer, removed for reduced motion */
+.skeleton {
+  background: var(--color-raised);
+  animation: pulse 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  .pressable:active { transform: none; }
+}
+:root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after {
+  animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important;
+}
+:root[data-motion="reduce"] .pressable:active { transform: none; }
+
+/* Secret fields (API keys, tokens): masked like a password, but not a password,
+   so iOS and password managers don't offer to fill or save them. */
+.secret-field { -webkit-text-security: disc; font-family: var(--font-sans); letter-spacing: 0.08em; }
+.secret-field::placeholder { letter-spacing: normal; }
+
+/* Hide scrollbars on horizontal chip rows while keeping them scrollable */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Inputs: iOS zooms into fields under 16px, so fields are 16px on touch screens */
+input, select, textarea { font: inherit; color: inherit; }
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* Sheets: slide up on phones, scale in on desktop. Exit is faster than enter. */
+.sheet-overlay[data-state="open"] { animation: overlay-in 200ms var(--ease-out); }
+.sheet-overlay[data-state="closed"] { animation: overlay-out 150ms ease-in forwards; }
+.sheet-content[data-state="open"] { animation: sheet-up 380ms var(--ease-drawer); }
+.sheet-content[data-state="closed"] { animation: sheet-down 220ms ease-in forwards; }
+@media (min-width: 640px) {
+  .sheet-content[data-state="open"] { animation: dialog-in 200ms var(--ease-out); }
+  .sheet-content[data-state="closed"] { animation: dialog-out 140ms ease-in forwards; }
+}
+@keyframes overlay-in { from { opacity: 0; } }
+@keyframes overlay-out { to { opacity: 0; } }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); } }
+@keyframes dialog-out { to { opacity: 0; transform: translate(-50%, -49%) scale(0.98); } }
+
+.toast { animation: toast-in 260ms var(--ease-out); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+
+/* Dropdown menus */
+.menu-content { animation: menu-in 140ms var(--ease-out); transform-origin: var(--radix-dropdown-menu-content-transform-origin); }
+@keyframes menu-in { from { opacity: 0; transform: scale(0.96); } }
