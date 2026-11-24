@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DealCard, DealGridSkeleton, DealRow } from "@/components/deal";
-import { Button, Empty, ErrorBox, Panel, PanelHeader, Skeleton } from "@/components/ui";
+import { Button, Empty, ErrorBox, Notice, Panel, PanelHeader, Skeleton } from "@/components/ui";
 import { get } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { dayTime, plural, relTime, usd } from "@/lib/format";
-import type { Dashboard } from "@/lib/types";
+import type { Dashboard, Outage } from "@/lib/types";
 import { usePrefs } from "@/lib/prefs";
 
 function greeting() {
@@ -58,6 +59,36 @@ function Setup({ d }: { d: Dashboard }) {
   );
 }
 
+/** Admins only: shown for two days after the server was offline, until dismissed. */
+function OutageNotice({ o }: { o: Outage }) {
+  const key = `schnaeppli.outage-seen.${o.to}`;
+  const [hidden, setHidden] = useState(() => localStorage.getItem(key) === "1");
+  if (hidden) return null;
+  const from = new Date(o.from);
+  const to = new Date(o.to);
+  const fmt = (x: Date) => x.toLocaleString("de-CH", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+  const span = o.minutes < 60 ? `${o.minutes} min` : `${Math.floor(o.minutes / 60)} h ${o.minutes % 60} min`;
+  const caught = [
+    o.searches_caught_up ? `${o.searches_caught_up} search${o.searches_caught_up === 1 ? "" : "es"} ran again` : null,
+    o.runs_restarted.length ? `${o.runs_restarted.length} interrupted run${o.runs_restarted.length === 1 ? "" : "s"} restarted` : null,
+    o.analyses_requeued ? `${o.analyses_requeued} analyses queued again` : null,
+    "missed digests sent late",
+  ].filter(Boolean);
+  return (
+    <div className="mb-6">
+      <Notice
+        tone="warning"
+        action={<Button size="sm" variant="ghost" onClick={() => { localStorage.setItem(key, "1"); setHidden(true); }}>Dismiss</Button>}
+      >
+        <p className="font-medium">The server was offline for {span} ({fmt(from)} to {fmt(to)}).</p>
+        <p className="mt-0.5">
+          {o.clean ? "It was shut down normally." : "It stopped without shutting down: probably a crash or power loss."} Caught up: {caught.join(", ")}. No data was lost.
+        </p>
+      </Notice>
+    </div>
+  );
+}
+
 export default function Home() {
   const me = useMe();
   const show = new Set(usePrefs().home_sections);
@@ -87,6 +118,8 @@ export default function Home() {
 
       {q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : null}
       {d && <Setup d={d} />}
+
+      {d?.last_outage && <OutageNotice o={d.last_outage} />}
 
       {d?.ai_budget.paused_reason && (
         <Panel className="mb-6 px-4 py-3 text-sm">

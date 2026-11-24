@@ -58,10 +58,32 @@ def next_search_run(search: SearchProfile, user: User, after: datetime) -> datet
 
 
 def digest_due(user: User, now: datetime, window_minutes: int = 5) -> str | None:
-    """Returns the digest slot ("07:00") if one is due now, else None."""
+    """Returns the digest slot ("07:00") that is due now, else None.
+
+    Normally a slot is due during the five minutes after its time. After an outage
+    the worker passes a longer window, so slots missed while the server was down are
+    still sent (the newest one; a digest covers everything since the previous one).
+    """
     prefs = user.notification_prefs or {}
     if not prefs.get("digest_enabled", True):
         return None
+    tz = ZoneInfo(user.timezone or "Europe/Zurich")
+    local = now.astimezone(tz)
+    days = set(prefs.get("digest_days", range(7)))
+    last = user.last_digest_at.astimezone(tz) if user.last_digest_at else None
+    best: tuple[datetime, str] | None = None
+    for back in (0, 1):  # an outage window can reach into yesterday
+        day = local.date() - timedelta(days=back)
+        if day.weekday() not in days:
+            continue
+        for t in prefs.get("digest_times", ["07:00", "18:00"]):
+            slot = datetime.combine(day, _parse(t), tzinfo=tz)
+            if timedelta(0) <= local - slot < timedelta(minutes=window_minutes) and (
+                last is None or last < slot
+            ):
+                if best is None or slot > best[0]:
+                    best = (slot, t)
+    return best[1] if best else None
     tz = ZoneInfo(user.timezone or "Europe/Zurich")
     local = now.astimezone(tz)
     if local.weekday() not in set(prefs.get("digest_days", range(7))):

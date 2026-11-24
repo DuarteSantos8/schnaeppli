@@ -75,5 +75,6 @@ Last updated 2026-11-24 (v0.1.0). Legend: ✅ done and tested ·
 | Two-factor auth | ⬜ | |
 | Frontend automated tests | ⬜ | vitest configured, no tests yet |
 | Docker Compose, health checks, non-root read-only containers | ✅ | |
-| Daily DB backups + restore | ✅ | Restore tested into a scratch database |
+| DB backups + restore | ✅ | Interval dumps with integrity check and catch-up after downtime; restore tested into a scratch database |
+| Crash recovery and outage report | ✅ | Heartbeat, interrupted runs restarted, missed digests sent late, admin report |
 | CI (lint, tests, build, gitleaks) | 🟡 | Workflow written, runs once the repo is on GitHub |

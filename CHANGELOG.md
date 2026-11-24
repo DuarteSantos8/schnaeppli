@@ -13,6 +13,11 @@ First version.
   start page; which sections Home shows; the four phone tabs.
 - Own pickers instead of the platform's select wheels, with a filter for long lists.
 - API keys, setup tokens and invite codes no longer trigger password autofill.
+- Crash recovery: the worker notices when the server was offline, restarts
+  interrupted search runs, catches up overdue searches, sends missed digests late
+  and reports the outage to administrators (Telegram and Home).
+- Backups: configurable interval, an overdue dump runs right after start, each dump
+  is checked before it counts, and `status.json` records the result.
 - Faster navigation: page code is preloaded, the app frame stays put while a page
   loads, and resized listing photos are cached on the server.
 

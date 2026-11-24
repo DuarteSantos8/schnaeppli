@@ -105,6 +105,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-schnaeppli}
       KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
       BACKUP_HOUR: ${BACKUP_HOUR:-3}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
     volumes:
       - ${BACKUP_DIR:-./backups}:/backups
       - ./deploy/backup.sh:/backup.sh:ro

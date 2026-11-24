@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -33,7 +33,7 @@ from app.models import (
     TelegramLink,
     User,
 )
-from app.services import assistant, notify, telegram
+from app.services import assistant, notify, resilience, telegram
 from app.services.digest import send_digest
 from app.sources.registry import all_sources
 
@@ -325,7 +325,11 @@ async def dashboard(user: User = Depends(current_user), db: AsyncSession = Depen
     except gateway.NoProvider:
         ai_ready = False
     link = await db.scalar(select(TelegramLink).where(TelegramLink.user_id == user.id))
+    outage = await resilience.last_outage(db) if me.is_admin else None
+    if outage and datetime.fromisoformat(outage["to"]) < utcnow() - timedelta(hours=48):
+        outage = None
     return {
+        "last_outage": outage,
         "active_searches": active or 0,
         "new_today": new_today or 0,
         "good_this_week": good_week or 0,

@@ -265,7 +265,18 @@ export interface SourceInfo {
   available: boolean;
 }
 
+export interface Outage {
+  from: string;
+  to: string;
+  minutes: number;
+  clean: boolean;
+  searches_caught_up: number;
+  runs_restarted: string[];
+  analyses_requeued: number;
+}
+
 export interface Dashboard {
+  last_outage: Outage | null;
   active_searches: number;
   new_today: number;
   good_this_week: number;

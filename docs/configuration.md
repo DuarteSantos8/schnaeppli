@@ -51,7 +51,8 @@ Compose file passes them.
 | `SCHNAEPPLI_PROXY_NETWORK` | `schnaeppli-proxy` | Docker network shared with your reverse proxy. |
 | `BACKUP_DIR` | `./backups` | Database dumps. |
 | `BACKUP_KEEP_DAYS` | `14` | Retention. |
-| `BACKUP_HOUR` | `3` | Hour of the daily dump (container time, UTC). |
+| `BACKUP_HOUR` | `3` | Hour the dumps are aligned to (container time, UTC). |
+| `BACKUP_INTERVAL_HOURS` | `24` | Hours between dumps. An overdue dump (server was off) runs right after start. Each dump is checked before it counts; `status.json` holds the last result. |
 
 ## Per-user settings (in the app)
 

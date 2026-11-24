@@ -23,7 +23,7 @@ from app.core.config import get_settings
 from app.core.db import sessionmaker, utcnow
 from app.core.logging import setup_logging
 from app.models import SearchMatch, SearchProfile, User
-from app.services import analysis, digest, notify, telegram
+from app.services import analysis, digest, notify, resilience, telegram
 from app.services.runner import run_search
 from app.services.schedule import digest_due, next_search_run
 
@@ -68,7 +68,12 @@ async def digest_job(ctx, user_id: str, slot: str) -> str:
 
 async def tick(ctx) -> None:
     now = utcnow()
+    window = 5
+    if ctx.get("catchup_ticks", 0) > 0:  # the first ticks after an outage also send missed digests
+        ctx["catchup_ticks"] -= 1
+        window = ctx.get("digest_window", 5)
     async with sessionmaker()() as db:
+        await resilience.heartbeat(db, now)
         due = (
             await db.scalars(
                 select(SearchProfile)
@@ -103,7 +108,7 @@ async def tick(ctx) -> None:
 
         users = (await db.scalars(select(User).where(User.is_active.is_(True)))).all()
         for u in users:
-            slot = digest_due(u, now)
+            slot = digest_due(u, now, window_minutes=window)
             if slot:
                 await ctx["redis"].enqueue_job(
                     "digest_job", str(u.id), slot, _job_id=f"digest:{u.id}:{now:%Y%m%d}:{slot}"
@@ -159,11 +164,33 @@ async def telegram_poller() -> None:
 
 async def startup(ctx) -> None:
     setup_logging()
+    try:
+        await _recover(ctx)
+    except Exception as e:  # recovery must never keep the worker from starting
+        log.error("recovery_failed", error=type(e).__name__)
     ctx["poller"] = asyncio.create_task(telegram_poller())
     log.info("worker_started")
 
 
+async def _recover(ctx) -> None:
+    async with sessionmaker()() as db:
+        report = await resilience.recover(db)
+        if not report:
+            return
+        ctx["digest_window"] = resilience.digest_window(report)
+        ctx["catchup_ticks"] = 2
+        waiting = (
+            await db.scalars(select(SearchMatch.id).where(SearchMatch.analysis_state == "queued").limit(500))
+        ).all()
+        for mid in waiting:
+            await ctx["redis"].enqueue_job("analyze_match_job", str(mid), _job_id=f"analyze:{mid}")
+        await resilience.send_report(db, report)
+
+
 async def shutdown(ctx) -> None:
+    with contextlib.suppress(Exception):
+        async with sessionmaker()() as db:
+            await resilience.heartbeat(db, clean=True)
     task = ctx.get("poller")
     if task:
         task.cancel()
