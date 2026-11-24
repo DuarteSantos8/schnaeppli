@@ -225,7 +225,9 @@ async def analyze_match(db: AsyncSession, match_id: uuid.UUID, *, deep: bool = F
     if deep:
         comps = await comparables(db, search, (listing.identity or {}).get("product"), listing.id)
         if comps:
-            prompt.user += f"\n\nAsking prices of comparable listings Schnäppli has seen: {sorted(comps)[:20]}"
+            prompt.user += (
+                f"\n\nAsking prices of comparable listings Schnäppli has seen: {sorted(comps)[:20]}"
+            )
     try:
         completion, usage = await gateway.call(
             db, user, kind, prompt, ListingAssessment, search_id=search.id, listing_id=listing.id

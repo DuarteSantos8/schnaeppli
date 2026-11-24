@@ -310,7 +310,9 @@ async def handle_update(db: AsyncSession, update: dict) -> None:
         for link in links:
             link.chat_id, link.linked_at = None, None
         await db.commit()
-        await telegram.send_message(chat_id, "Disconnected. You won't receive messages from Schnäppli anymore.")
+        await telegram.send_message(
+            chat_id, "Disconnected. You won't receive messages from Schnäppli anymore."
+        )
     elif text in ("/help", "help"):
         await telegram.send_message(
             chat_id, "Schnäppli sends deal alerts and digests. /stop disconnects this chat."
