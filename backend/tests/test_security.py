@@ -43,7 +43,9 @@ def test_key_rotation():
 
 
 def test_redaction():
-    assert "AAH" not in redact("https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/x")
+    # Built at runtime so no token-shaped literal sits in the repo (it would trip secret scanners).
+    fake_token = "0" * 9 + ":" + "FAKE" + "x" * 31
+    assert "FAKE" not in redact(f"https://api.telegram.org/bot{fake_token}/x")
     assert "sk-ant" not in redact("key sk-ant-api03-abcdefghijklmnop")
     assert "hunter2" not in redact('{"password": "hunter2"}')
 
