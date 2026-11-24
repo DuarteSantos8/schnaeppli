@@ -13,11 +13,13 @@ from app.core.db import utcnow
 from app.models import SearchMatch, SearchProfile, SearchRun, User
 from app.services import listings as listing_svc
 from app.services.schedule import next_search_run
+from app.sources import shops
 from app.sources.base import SearchQuery, SourceError
 from app.sources.registry import enabled_sources_for
 
 log = structlog.get_logger()
 MAX_QUERIES = 6
+SHOP_QUERIES = 2  # user-added shops get fewer requests per run
 
 
 def queries_for(search: SearchProfile) -> list[str]:
@@ -50,6 +52,11 @@ async def run_search(db: AsyncSession, search_id: uuid.UUID) -> tuple[SearchRun,
     await db.flush()
 
     sources = enabled_sources_for(search.sources)
+    sources += [
+        a
+        for a in await shops.adapters_for(db, user.id)
+        if (search.sources or {}).get(a.id, {}).get("enabled", True)
+    ]
     report: dict = {}
     new_match_ids: list[uuid.UUID] = []
     repriced: list[uuid.UUID] = []
@@ -59,7 +66,8 @@ async def run_search(db: AsyncSession, search_id: uuid.UUID) -> tuple[SearchRun,
 
     for adapter in sources:
         stats = {"queries": 0, "results": 0, "new": 0}
-        for q in queries_for(search):
+        qs = queries_for(search)
+        for q in qs[:SHOP_QUERIES] if isinstance(adapter, shops.ShopAdapter) else qs:
             try:
                 results = await adapter.search(
                     SearchQuery(
@@ -94,6 +102,7 @@ async def run_search(db: AsyncSession, search_id: uuid.UUID) -> tuple[SearchRun,
                 elif match.price_dropped_at and previous is not None and match.analysis_state == "done":
                     repriced.append(match.id)
         report[adapter.id] = stats
+    await shops.record(db, sources)
 
     # Retry earlier matches that were queued but not analysed (e.g. budget reset).
     conds = [SearchMatch.search_id == search.id, SearchMatch.analysis_state.in_(("queued", "limited"))]

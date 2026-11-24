@@ -13,6 +13,12 @@ First version.
   start page; which sections Home shows; the four phone tabs.
 - Own pickers instead of the platform's select wheels, with a filter for long lists.
 - API keys, setup tokens and invite codes no longer trigger password autofill.
+- Your own shops (Settings → Sources): add a shop by its search address; it's tested on
+  the spot and searched with every search, where robots.txt allows and the shop
+  publishes product data.
+- robots.txt is now read like RFC 9309 (wildcards, longest match). The old parser
+  ignored `*` rules.
+- Fixed: gzip-compressed pages failed to load in link import and robots checks.
 - Galaxus and Digitec through Galaxus' official MCP interface; their prices also
   serve as the new-price reference for used listings.
 - Ricardo and tutti through their own saved-search e-mails: an IMAP inbox adapter,

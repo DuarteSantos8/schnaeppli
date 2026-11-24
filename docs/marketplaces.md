@@ -82,6 +82,27 @@ Sources says so.
 Limits: only listings that appear after the saved search was created arrive, and the
 analysis has the alert's title, price and photo, not the full description.
 
+## Your own shops {#shops}
+
+Settings → Sources → **Your shops**: add any shop, and Schnäppli searches it with every
+one of your searches (two search terms per run). Paste the address of a results page
+from the shop's own search (Schnäppli finds the search word in it), or put `{query}`
+where the word goes. A WooCommerce shop's plain address works too: Schnäppli then uses
+WooCommerce's public Store API.
+
+Adding a shop runs one real search and shows the first results, so you see straight
+away whether it works. Schnäppli reads only what shops publish for machines:
+
+- the schema.org product data (JSON-LD or microdata) on the search page, or
+- the WooCommerce Store API.
+
+It never fetches a page that robots.txt closes (wildcard rules included). It doesn't
+get around bot checks either. A shop that answers 403/429 or shows a captcha is marked
+"Blocks programs" and paused for a week. One request per shop and term, a few seconds
+apart per host, cached for 30 minutes. Many large retailers close their search pages
+to programs, and the test tells you so. eBay, Galaxus/Digitec, Ricardo, tutti and Amazon
+can't be added here: the first four are built in, and Amazon forbids automated access.
+
 ## Facebook Marketplace (not supported)
 
 No API, and Meta's terms prohibit automated collection. No permitted alternative is
@@ -89,7 +110,8 @@ known.
 
 ## Interdiscount, Toppreise (no search)
 
-No public product search APIs (Interdiscount's robots.txt also closes its search pages).
+No public product search APIs. Interdiscount answers programs with 403, Toppreise with a
+bot check, and Schnäppli doesn't get around either.
 Single product pages can be added by link where robots.txt allows.
 
 ## Amazon (planned)

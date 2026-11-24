@@ -16,6 +16,7 @@ from app.models import (
     AIUsage,
     ChatMessage,
     ChatThread,
+    CustomShop,
     Listing,
     Notification,
     Purchase,
@@ -94,6 +95,7 @@ async def export_data(user: User = Depends(current_user), db: AsyncSession = Dep
         )
     ).all()
     wish = (await db.scalars(select(WishlistItem).where(WishlistItem.user_id == user.id))).all()
+    shops = (await db.scalars(select(CustomShop).where(CustomShop.user_id == user.id))).all()
     purchases = (await db.scalars(select(Purchase).where(Purchase.user_id == user.id))).all()
     usage = (await db.scalars(select(AIUsage).where(AIUsage.user_id == user.id))).all()
     threads = (await db.scalars(select(ChatThread).where(ChatThread.user_id == user.id))).all()
@@ -112,6 +114,9 @@ async def export_data(user: User = Depends(current_user), db: AsyncSession = Dep
             for m, lst in matches
         ],
         "wishlist": [wishlist_out(w) for w in wish],
+        "shops": [
+            {"name": s.name, "search_url": s.search_url, "kind": s.kind, "enabled": s.enabled} for s in shops
+        ],
         "purchases": [
             {"title": p.title, "amount": float(p.amount), "status": p.status, "month": p.month}
             for p in purchases

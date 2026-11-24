@@ -79,6 +79,7 @@ Schnäppli only uses official APIs and permitted access. It doesn't scrape sites
 | Galaxus, Digitec | ✅ Supported | Galaxus' official interface for AI assistants. New products and current prices; also the new-price reference for used listings. |
 | Ricardo, tutti.ch | ✅ Via alert e-mails | No search API and they block bots, so Schnäppli reads their own saved-search mails from its mailbox. |
 | Facebook Marketplace | ❌ Not supported | No API, and automated collection is prohibited. |
+| Your own shops | ✅ You add them | Any shop whose search allows programs and publishes product data (schema.org or WooCommerce). Tested when you add it. |
 | Interdiscount, Toppreise | ❌ No search | No public product API. Single products can be added by link. |
 | Amazon | 🕓 Planned | The product API needs an Associates account with sales. |
 

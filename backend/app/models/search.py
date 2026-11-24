@@ -226,3 +226,24 @@ class Purchase(IdMixin, TimestampMixin, Base):
         Uuid, ForeignKey("wishlist_items.id", ondelete="SET NULL")
     )
     note: Mapped[str | None] = mapped_column(String(500))
+
+
+class CustomShop(IdMixin, TimestampMixin, Base):
+    """A shop the user added; searched with every one of their searches
+    (see app/sources/shops.py)."""
+
+    __tablename__ = "custom_shops"
+    __table_args__ = (UniqueConstraint("user_id", "host", name="uq_custom_shop_user_host"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    host: Mapped[str] = mapped_column(String(120))
+    mode: Mapped[str] = mapped_column(String(8))  # woo | page
+    search_url: Mapped[str] = mapped_column(String(1000))  # contains {query}
+    kind: Mapped[str] = mapped_column(String(12), default="retail")  # retail | secondhand
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    state: Mapped[str] = mapped_column(String(12), default="untested")
+    state_detail: Mapped[str | None] = mapped_column(String(300))
+    checked_at: Mapped[datetime | None]
+    paused_until: Mapped[datetime | None]
+    found_total: Mapped[int] = mapped_column(Integer, default=0)

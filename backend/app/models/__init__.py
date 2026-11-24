@@ -9,6 +9,7 @@ from app.models.ai import (
 )
 from app.models.search import (
     Analysis,
+    CustomShop,
     Listing,
     PricePoint,
     Purchase,
@@ -26,6 +27,7 @@ __all__ = [
     "AuditLog",
     "ChatMessage",
     "ChatThread",
+    "CustomShop",
     "Invite",
     "Listing",
     "Notification",

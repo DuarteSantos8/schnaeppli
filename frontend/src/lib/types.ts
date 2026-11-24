@@ -254,6 +254,29 @@ export interface WishItem {
   created_at: string;
 }
 
+export interface Shop {
+  id: string;
+  name: string;
+  host: string;
+  mode: "woo" | "page";
+  search_url: string;
+  kind: "retail" | "secondhand";
+  enabled: boolean;
+  state: "ok" | "robots" | "blocked" | "no_data" | "error" | "untested";
+  state_text: string;
+  checked_at: string | null;
+  paused_until: string | null;
+  found_total: number;
+}
+
+export interface ShopPreview {
+  title: string;
+  price: number | null;
+  currency: string;
+  url: string;
+  image: string | null;
+}
+
 export interface InboxInfo {
   configured: boolean;
   address: string | null;

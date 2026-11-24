@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import ai, auth, budget, deals, images, me, misc, searches, wishlist
+from app.api import ai, auth, budget, deals, images, me, misc, searches, shops, wishlist
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.logging import setup_logging
@@ -95,6 +95,7 @@ def create_app() -> FastAPI:
         ai.router,
         misc.router,
         images.router,
+        shops.router,
     ):
         app.include_router(r)
     return app

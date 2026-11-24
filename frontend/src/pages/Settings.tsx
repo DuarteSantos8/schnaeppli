@@ -3,11 +3,11 @@ import { Copy, ExternalLink, Trash2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useParams } from "react-router-dom";
 import { TagInput } from "@/components/SearchForm";
-import { Button, Confirm, cx, ErrorBox, Field, IconButton, Input, Notice, PageHeader, Pill, Segmented, Sheet, Skeleton, SwitchRow, useToast } from "@/components/ui";
+import { Button, Confirm, cx, ErrorBox, Field, IconButton, Input, Notice, PageHeader, Pill, Segmented, Sheet, Skeleton, Switch, SwitchRow, useToast } from "@/components/ui";
 import { del, get, patch, post, put } from "@/lib/api";
 import { useAuth, useMe } from "@/lib/auth";
-import { relTime, usd } from "@/lib/format";
-import type { AILimits, InboxInfo, NotificationPrefs, SourceInfo, User } from "@/lib/types";
+import { money, relTime, usd } from "@/lib/format";
+import type { AILimits, InboxInfo, NotificationPrefs, Shop, ShopPreview, SourceInfo, User } from "@/lib/types";
 import { Picker } from "@/components/Picker";
 import Appearance from "./Appearance";
 
@@ -516,6 +516,7 @@ function Sources() {
   const label = { ready: ["Working", "positive"], alerts: ["Via alert mails", "positive"], manual: ["By link", "score"], needs_credentials: ["Needs setup", "warning"], planned: ["Planned", "neutral"], unsupported: ["Not supported", "neutral"] } as const;
   return (
     <>
+    <Shops />
     <Inbox />
     <Row title="Marketplaces" description="Schnäppli only uses official APIs and permitted access. It does not scrape sites that forbid it or work around bot protection. Sources that can't be used legitimately are listed honestly with alternatives.">
       {q.isLoading ? <Skeleton className="h-40" /> : (
@@ -533,6 +534,132 @@ function Sources() {
       )}
     </Row>
     </>
+  );
+}
+
+const SHOP_STATE = {
+  ok: ["Working", "positive"],
+  untested: ["Not tested", "neutral"],
+  robots: ["Not allowed", "neutral"],
+  blocked: ["Blocks programs", "warning"],
+  no_data: ["Can't read", "warning"],
+  error: ["Unreachable", "warning"],
+} as const;
+
+function Shops() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const q = useQuery({ queryKey: ["shops"], queryFn: () => get<Shop[]>("/api/shops") });
+  const [address, setAddress] = useState("");
+  const [kind, setKind] = useState<"retail" | "secondhand">("retail");
+  const [result, setResult] = useState<{ shop: Shop; preview: ShopPreview[] } | null>(null);
+  const add = useMutation({
+    mutationFn: () => post<{ shop: Shop; preview: ShopPreview[] }>("/api/shops", { address, kind }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["shops"] });
+      setResult(r);
+      setAddress("");
+      toast.show(r.shop.state === "ok" ? `${r.shop.name} added` : `${r.shop.name} added, but it can't be searched`);
+    },
+  });
+  const shops = q.data || [];
+  return (
+    <Row
+      title="Your shops"
+      description={
+        <>
+          Add any shop and Schnäppli searches it with every search. It reads the product data shops publish for search engines,
+          and only where the shop allows programs. Shops that block programs are left alone.
+        </>
+      }
+    >
+      <form
+        className="grid gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (address.trim()) add.mutate();
+        }}
+      >
+        <Field
+          label="Shop search address"
+          htmlFor="shop-address"
+          error={add.error ? (add.error as Error).message : null}
+          hint={<>Search for something on the shop, then copy the address of the results page. A WooCommerce shop's plain address works too.</>}
+        >
+          <Input id="shop-address" inputMode="url" placeholder="https://www.example-shop.ch/search?q=leica" value={address} onChange={(e) => setAddress(e.target.value)} />
+        </Field>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Segmented size="sm" label="What the shop sells" value={kind} onChange={setKind} options={[{ value: "retail", label: "New" }, { value: "secondhand", label: "Second-hand" }]} />
+          <Button type="submit" size="sm" loading={add.isPending} disabled={!address.trim()}>Add and test</Button>
+        </div>
+      </form>
+
+      {result && <TestResult r={result} onClose={() => setResult(null)} />}
+
+      {q.isLoading ? <Skeleton className="mt-5 h-16" /> : shops.length > 0 && (
+        <ul className="mt-5 border-t border-rule">
+          {shops.map((s) => <ShopRow key={s.id} s={s} onTested={setResult} />)}
+        </ul>
+      )}
+    </Row>
+  );
+}
+
+function TestResult({ r, onClose }: { r: { shop: Shop; preview: ShopPreview[] }; onClose: () => void }) {
+  const ok = r.shop.state === "ok";
+  return (
+    <div className="mt-4 rounded-[10px] bg-sunk p-3 text-sm" role="status">
+      <div className="flex items-start justify-between gap-3">
+        <p className={cx("font-medium", ok ? "text-ink" : "text-warning")}>
+          {ok ? (r.preview.length ? `${r.shop.name} works. First results:` : r.shop.state_text) : `${r.shop.name}: ${r.shop.state_text}`}
+        </p>
+        <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+      </div>
+      {r.preview.length > 0 && (
+        <ul className="mt-2 divide-y divide-rule">
+          {r.preview.map((p) => (
+            <li key={p.url} className="flex items-center justify-between gap-3 py-1.5">
+              <a className="min-w-0 truncate hover:underline" href={p.url} target="_blank" rel="noreferrer noopener">{p.title}</a>
+              <span className="num shrink-0 text-muted">{p.price != null ? money(p.price, p.currency) : "No price"}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!ok && <p className="mt-1 text-muted">It stays in your list but isn't searched. You can test it again later.</p>}
+    </div>
+  );
+}
+
+function ShopRow({ s, onTested }: { s: Shop; onTested: (r: { shop: Shop; preview: ShopPreview[] }) => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [confirm, setConfirm] = useState(false);
+  const refresh = () => qc.invalidateQueries({ queryKey: ["shops"] });
+  const toggle = useMutation({ mutationFn: (enabled: boolean) => patch<Shop>(`/api/shops/${s.id}`, { enabled }), onSuccess: refresh });
+  const test = useMutation({ mutationFn: () => post<{ shop: Shop; preview: ShopPreview[] }>(`/api/shops/${s.id}/test`, {}), onSuccess: (r) => { refresh(); onTested(r); } });
+  const remove = useMutation({ mutationFn: () => del(`/api/shops/${s.id}`), onSuccess: () => { refresh(); setConfirm(false); toast.show(`${s.name} removed`); } });
+  const [text, tone] = SHOP_STATE[s.state];
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-rule py-3 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+          <span className="truncate">{s.name}</span>
+          <Pill tone={tone}>{text}</Pill>
+        </div>
+        <p className="mt-0.5 text-[0.8125rem] text-muted">
+          {s.host} · {s.kind === "retail" ? "new" : "second-hand"}
+          {s.state === "ok" && s.found_total > 0 && ` · ${s.found_total} found so far`}
+          {s.checked_at && ` · checked ${relTime(s.checked_at)}`}
+        </p>
+        {s.state !== "ok" && s.state !== "untested" && <p className="mt-0.5 text-[0.8125rem] text-muted">{s.state_text}</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="ghost" loading={test.isPending} onClick={() => test.mutate()}>Test</Button>
+        <IconButton label={`Remove ${s.name}`} onClick={() => setConfirm(true)}><Trash2 className="size-4" aria-hidden /></IconButton>
+        <Switch label={`Search ${s.name}`} checked={s.enabled} disabled={toggle.isPending} onChange={(v) => toggle.mutate(v)} />
+      </div>
+      <Confirm open={confirm} onOpenChange={setConfirm} title={`Remove ${s.name}?`} body="Deals already found there stay in your searches." confirmLabel="Remove" danger loading={remove.isPending} onConfirm={() => remove.mutate()} />
+    </li>
   );
 }
 
