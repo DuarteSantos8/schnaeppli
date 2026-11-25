@@ -17,10 +17,8 @@ _EMAIL_ALT = (
 class AlertSource(SourceAdapter):
     """A marketplace reached through its own alert e-mails (see sources/inbox.py)."""
 
-    kind = "secondhand"
-
-    def __init__(self, id: str, name: str, homepage: str, why: str):
-        self.id, self.name, self.homepage, self._why = id, name, homepage, why
+    def __init__(self, id: str, name: str, homepage: str, why: str, kind: str = "secondhand"):
+        self.id, self.name, self.homepage, self._why, self.kind = id, name, homepage, why, kind
 
     def status(self) -> SourceStatus:
         from app.sources import inbox
@@ -54,13 +52,12 @@ def all_sources() -> dict[str, SourceAdapter]:
             "No public API, and its robots.txt closes listing pages to automated clients, so Schnäppli "
             "reads tutti's own saved-search e-mails instead.",
         ),
-        UnsupportedSource(
+        AlertSource(
             "facebook",
             "Facebook Marketplace",
-            "secondhand",
             "https://www.facebook.com/marketplace",
-            "Meta offers no Marketplace search API, and its terms prohibit automated collection.",
-            "No permitted alternative is known.",
+            "Meta offers no Marketplace search API and its terms prohibit automated collection, so "
+            "Schnäppli reads the e-mails of your Marketplace saved searches instead (they can arrive late).",
         ),
         UnsupportedSource(
             "interdiscount",
@@ -70,13 +67,13 @@ def all_sources() -> dict[str, SourceAdapter]:
             "No public product search API, and the site turns automated clients away (403).",
             "Add single products by link.",
         ),
-        UnsupportedSource(
+        AlertSource(
             "toppreise",
             "Toppreise.ch",
-            "retail",
             "https://www.toppreise.ch",
-            "No public API, and the site answers programs with a bot check. Schnäppli doesn't get around that.",
-            "Add the shops Toppreise lists under Settings → Sources → Your shops.",
+            "Its API needs permission (requested) and the site shows programs a bot check, so Schnäppli "
+            "reads Toppreise's own price-alert e-mails instead: set an alert on a product there.",
+            kind="retail",
         ),
         UnsupportedSource(
             "amazon",

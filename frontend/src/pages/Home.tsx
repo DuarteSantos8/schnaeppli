@@ -19,7 +19,7 @@ function Setup({ d }: { d: Dashboard }) {
   const steps = [
     { done: d.setup.ai_ready, label: "Choose the AI", hint: "Schnäppli needs it to understand requests and judge listings.", to: "/setup#ai" },
     { done: d.setup.location_set, label: "Set your postal code", hint: "Used locally for pickup distances. Never sent to AI providers.", to: "/setup#location" },
-    { done: d.setup.mail_connected, label: "Connect your mailbox for Ricardo and tutti", hint: "Their alert mails bring their listings in. Read-only, only their mails.", to: "/setup#mail" },
+    { done: d.setup.mail_connected, label: "Connect your mailbox for Ricardo, tutti, Facebook and Toppreise", hint: "Their alert mails bring their listings in. Read-only, only their mails.", to: "/setup#mail" },
     ...(d.setup.telegram_configured
       ? [{ done: d.setup.telegram_linked, label: "Connect Telegram", hint: "For instant alerts and your daily digest.", to: "/setup#telegram" }]
       : []),

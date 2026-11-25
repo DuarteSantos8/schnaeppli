@@ -671,7 +671,7 @@ function Inbox() {
   const c = own.data?.connection;
   return (
     <Row
-      title="Ricardo and tutti"
+      title="Ricardo, tutti, Facebook, Toppreise"
       description="Neither site lets programs search it. Both e-mail new listings for a saved search, and Schnäppli reads those mails every five minutes."
     >
       {!i || !own.data ? <Skeleton className="h-24" /> : (
@@ -681,8 +681,8 @@ function Inbox() {
               <p className="font-medium">{c ? c.address : "Your mailbox isn't connected"}</p>
               <p className="text-[0.8125rem] text-muted">
                 {c
-                  ? `${c.state === "ok" ? "Working" : "Needs attention"} · ${(c.totals.ricardo ?? 0) + (c.totals.tutti ?? 0)} listings so far${c.last_alert_at ? ` · last alert ${relTime(c.last_alert_at)}` : ""}`
-                  : "Connect the mailbox Ricardo and tutti write to. Read-only, only their mails."}
+                  ? `${c.state === "ok" ? "Working" : "Needs attention"} · ${Object.values(c.totals).reduce((a, b) => a + b, 0)} listings so far${c.last_alert_at ? ` · last alert ${relTime(c.last_alert_at)}` : ""}`
+                  : "Connect the mailbox these sites write to. Read-only, only their alert mails."}
               </p>
             </div>
             <NavLink to="/setup#mail"><Button size="sm" variant={c ? "secondary" : "primary"}>{c ? "Manage" : "Connect"}</Button></NavLink>

@@ -114,3 +114,40 @@ async def test_import_failure_is_recorded_not_raised(alice, monkeypatch):
     async with sessionmaker()() as db:
         assert await inbox_import.import_alerts(db) == []
         assert "login failed" in (await inbox_import.status(db))["error"]
+
+
+FACEBOOK_HTML = """<html><body>
+<p>Neue Angebote für deine gespeicherte Suche „Fujifilm X100“</p>
+<a href="https://www.facebook.com/n/?marketplace%2Fitem%2F1234567890123%2F&amp;aref=1&amp;medium=email">
+  <img src="https://scontent.xx.fbcdn.net/v/x100.jpg" width="120"></a>
+<a href="https://www.facebook.com/n/?marketplace%2Fitem%2F1234567890123%2F&amp;aref=1">Fujifilm X100V silber</a>
+<span>CHF 1’150</span>
+</body></html>"""
+
+TOPPREISE_HTML = """<html><body>
+<p>Preisalarm: Ihr Wunschpreis wurde erreicht</p>
+<a href="https://www.toppreise.ch/preisvergleich/Digitalkameras/FUJIFILM-X100VI-Silber-p771234?utm_source=preisalarm">FUJIFILM X100VI Silber</a>
+<p>Neuer Bestpreis: CHF 1'399.00 bei einem Händler</p>
+</body></html>"""
+
+
+def test_facebook_and_toppreise_alert_mails():
+    fb = parse_alert(
+        _mail("Neue Angebote für „Fujifilm X100“", html=FACEBOOK_HTML, sender="notification@facebookmail.com")
+    )
+    (item,) = fb.listings
+    assert item.source == "facebook" and item.external_id == "1234567890123"
+    assert item.url.rstrip("/") == "https://www.facebook.com/marketplace/item/1234567890123"
+    assert item.title == "Fujifilm X100V silber" and str(item.price) == "1150" and not item.is_new_retail
+    tp = parse_alert(
+        _mail("Preisalarm «FUJIFILM X100VI»", html=TOPPREISE_HTML, sender="noreply@toppreise.ch")
+    )
+    (item,) = tp.listings
+    assert item.source == "toppreise" and item.external_id == "771234" and item.is_new_retail
+    assert str(item.price) == "1399.00" and item.condition == "new"
+    from app.sources.mailbox import _from_any, _sender_is_alert
+
+    assert _sender_is_alert("Facebook <notification@facebookmail.com>") and not _sender_is_alert(
+        "x@facebook.example"
+    )
+    assert _from_any()[:4] == ["OR", "FROM", '"ricardo.ch"', "OR"]

@@ -4,7 +4,8 @@ The simple way to get those alerts in: no extra mailbox, no forwarding filter. T
 connects the mailbox their Ricardo / tutti account already mails to, with an app
 password. Schnäppli then:
 
-* only asks the server for mails *from* ricardo.ch and tutti.ch (IMAP SEARCH FROM),
+* only asks the server for mails *from* the alert senders (Ricardo, tutti, Toppreise,
+  Facebook; IMAP SEARCH FROM),
   and checks the sender again on its side;
 * opens the folder read-only (EXAMINE) and fetches with BODY.PEEK, so nothing in the
   mailbox changes, not even the "read" mark;
@@ -33,7 +34,7 @@ from app.sources.inbox import ParsedAlert, parse_alert
 log = structlog.get_logger()
 LOOKBACK_DAYS = 14
 MAX_PER_CHECK = 60
-ALERT_DOMAINS = ("ricardo.ch", "tutti.ch")
+ALERT_DOMAINS = ("ricardo.ch", "tutti.ch", "toppreise.ch", "facebookmail.com")
 
 
 @dataclass(frozen=True)
@@ -361,10 +362,7 @@ def _fetch_sync(acc: Account, uidvalidity: int | None, last_uid: int) -> MailBat
         if uidvalidity is not None and valid is not None and valid != uidvalidity:
             last_uid = 0  # the server renumbered its mails: look at the recent ones again
         since = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).strftime("%d-%b-%Y")
-        typ, data = box.uid(
-            "SEARCH", None, "UID", f"{last_uid + 1}:*", "SINCE", since,
-            "OR", "FROM", '"ricardo.ch"', "FROM", '"tutti.ch"',
-        )  # fmt: skip
+        typ, data = box.uid("SEARCH", None, "UID", f"{last_uid + 1}:*", "SINCE", since, *_from_any())
         uids = sorted(int(u) for u in (data[0] or b"").split()) if typ == "OK" else []
         uids = [u for u in uids if u > last_uid][:MAX_PER_CHECK]  # "n:*" always returns the newest one
         alerts, unreadable, newest = [], 0, last_uid
@@ -401,13 +399,19 @@ def _test_sync(acc: Account) -> int:
         if typ != "OK":
             raise MailboxError(f"The folder “{acc.folder}” doesn't exist.")
         since = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).strftime("%d-%b-%Y")
-        typ, data = box.uid(
-            "SEARCH", None, "SINCE", since, "OR", "FROM", '"ricardo.ch"', "FROM", '"tutti.ch"'
-        )
+        typ, data = box.uid("SEARCH", None, "SINCE", since, *_from_any())
         return len((data[0] or b"").split()) if typ == "OK" else 0
     finally:
         with contextlib.suppress(Exception):
             box.logout()
+
+
+def _from_any() -> list[str]:
+    """IMAP search keys: FROM any of the alert domains (OR is binary in IMAP, so it nests)."""
+    keys = ["FROM", f'"{ALERT_DOMAINS[-1]}"']
+    for d in reversed(ALERT_DOMAINS[:-1]):
+        keys = ["OR", "FROM", f'"{d}"', *keys]
+    return keys
 
 
 def _quote(folder: str) -> str:

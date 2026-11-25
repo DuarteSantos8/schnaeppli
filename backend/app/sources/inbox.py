@@ -39,7 +39,11 @@ log = structlog.get_logger()
 SITES = {
     "ricardo": re.compile(r"^https?://(?:www\.)?ricardo\.ch/(?:de|fr|it|en)/a/[^?#\s]*?(\d{6,})/?$", re.I),
     "tutti": re.compile(r"^https?://(?:www\.)?tutti\.ch/(?:de|fr|it)/vi/[^?#\s]*?(\d{5,})/?$", re.I),
+    "facebook": re.compile(r"^https?://(?:www\.|m\.|web\.)?facebook\.com/marketplace/item/(\d{6,})/?$", re.I),
+    "toppreise": re.compile(r"^https?://(?:www\.)?toppreise\.ch/preisvergleich/[^?#\s]+-p(\d{3,})/?$", re.I),
 }
+# Price-alert mails describe new products in shops, not second-hand listings.
+RETAIL_SITES = {"toppreise"}
 PRICE = re.compile(
     r"(?:CHF|Fr\.|SFr\.?)\s*([0-9][0-9'’\s]*(?:[.,][0-9]{2})?)|([0-9][0-9'’]*(?:[.,][0-9]{2})?)\s*(?:CHF|Fr\.)|([0-9][0-9'’]*)\.[–-]",
     re.I,
@@ -63,6 +67,10 @@ def _unwrap(url: str, depth: int = 0) -> list[str]:
     out = [url]
     if depth > 2:
         return out
+    p = urlsplit(url)
+    if p.netloc.lower().endswith("facebook.com") and p.path.rstrip("/") == "/n" and p.query:
+        # Facebook mail links: /n/?marketplace%2Fitem%2F123%2F&aref=… (the target path is the first key)
+        out.append(f"https://www.facebook.com/{unquote(p.query.split('&', 1)[0]).lstrip('/')}")
     for _k, v in parse_qsl(urlsplit(url).query, keep_blank_values=False):
         v = unquote(v)
         if v.startswith("http"):
@@ -215,10 +223,11 @@ def parse_alert(raw: bytes) -> ParsedAlert:
                 currency="CHF",
                 price_type="fixed",
                 shipping_known=False,
-                condition=None,
+                condition="new" if it.site in RETAIL_SITES else None,
                 country="CH",
                 seller={},
                 images=it.images[:1],
+                is_new_retail=it.site in RETAIL_SITES,
             )
         )
     site = out[0].source if out else None

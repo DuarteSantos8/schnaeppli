@@ -18,6 +18,8 @@ First version.
   Each step tested on the spot.
 - Connect your own mailbox for Ricardo / tutti alerts: no extra mailbox or forwarding
   filter. Read-only, only mails from ricardo.ch and tutti.ch, password encrypted.
+- Facebook Marketplace (saved-search mails) and Toppreise (price-alert mails) through the
+  same mailbox reader; search links for both on each search.
 - eBay key entered by the administrator in the browser, checked with eBay before saving.
 - Your own shops (Settings → Sources): add a shop by its search address; it's tested on
   the spot and searched with every search, where robots.txt allows and the shop

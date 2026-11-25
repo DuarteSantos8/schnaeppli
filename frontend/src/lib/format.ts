@@ -79,6 +79,7 @@ export const SOURCE_NAME: Record<string, string> = {
   galaxus: "Galaxus",
   interdiscount: "Interdiscount",
   toppreise: "Toppreise",
+  facebook: "Facebook",
   amazon: "Amazon",
   brack: "Brack",
   anibis: "anibis",

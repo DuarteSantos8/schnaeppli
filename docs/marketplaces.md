@@ -121,15 +121,25 @@ apart per host, cached for 30 minutes. Many large retailers close their search p
 to programs, and the test tells you so. eBay, Galaxus/Digitec, Ricardo, tutti and Amazon
 can't be added here: the first four are built in, and Amazon forbids automated access.
 
-## Facebook Marketplace (not supported)
+## Facebook Marketplace (through its alert e-mails) {#facebook}
 
-No API, and Meta's terms prohibit automated collection. No permitted alternative is
-known.
+No API, and Meta's terms prohibit automated collection. What Facebook offers is a saved
+search with notifications; under Settings → Notifications → Marketplace those can go by
+e-mail. Schnäppli reads them from the connected mailbox like Ricardo's (sender
+facebookmail.com, only `facebook.com/marketplace/item/…` links are used). They can arrive
+hours late. Parser tested with synthetic mails only so far.
 
-## Interdiscount, Toppreise (no search)
+## Toppreise (through its price-alert e-mails) {#toppreise}
 
-No public product search APIs. Interdiscount answers programs with 403, Toppreise with a
-bot check, and Schnäppli doesn't get around either.
+Toppreise's API needs its permission (requested 2026-11) and the site shows programs a
+bot check. Its price alert ("Preisalarm", the bell on a product page) e-mails you when a
+product gets cheaper; Schnäppli reads those mails and treats each as a new retail offer
+(the product, the new best price, the Toppreise link). Per product, so it suits things
+you've already decided on. Parser tested with synthetic mails only so far.
+
+## Interdiscount (no search)
+
+No public product search API, and it answers programs with 403.
 Single product pages can be added by link where robots.txt allows.
 
 ## Amazon (planned)

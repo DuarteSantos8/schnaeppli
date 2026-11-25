@@ -96,7 +96,7 @@ def _sender_ok(raw_from: str) -> bool:
     if not allowed:
         return True
     addr = parseaddr(raw_from)[1].lower()
-    return addr.endswith(("@ricardo.ch", ".ricardo.ch", "@tutti.ch", ".tutti.ch")) or addr in allowed
+    return mailbox._sender_is_alert(raw_from) or addr in allowed
 
 
 async def _store(

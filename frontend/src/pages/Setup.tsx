@@ -149,7 +149,7 @@ function MailStatus({ c }: { c: MailConnection }) {
     onSuccess: () => { refresh(); qc.invalidateQueries({ queryKey: ["setup-mail"] }); toast.show("Mailbox disconnected"); },
     onError: toast.error,
   });
-  const total = (c.totals.ricardo ?? 0) + (c.totals.tutti ?? 0);
+  const total = Object.values(c.totals).reduce((a, b) => a + b, 0);
   return (
     <div className="flex flex-col gap-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -229,7 +229,7 @@ function MailForm({ providers, existing }: { providers: MailProvider[]; existing
   return (
     <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (valid) connect.mutate(); }}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="The e-mail address Ricardo and tutti write to" htmlFor="mail-addr">
+        <Field label="The e-mail address those sites write to" htmlFor="mail-addr">
           <Input id="mail-addr" type="email" inputMode="email" value={address} onChange={(e) => { setAddress(e.target.value); setPicked(null); }} placeholder="you@gmail.com" />
         </Field>
         <Field label="Provider">
@@ -310,11 +310,12 @@ function MailStep() {
     <div className="flex flex-col gap-5">
       <div className="max-w-prose text-[0.8125rem] leading-relaxed text-muted">
         <p>
-          Ricardo and tutti don't let programs search them, but both e-mail you new listings for a saved search. Connect the mailbox those
-          mails go to and Schnäppli picks them up every five minutes.
+          Ricardo, tutti, Facebook Marketplace and Toppreise don't let programs search them, but all of them e-mail you: new listings
+          for a saved search, or a price alert. Connect the mailbox those mails go to and Schnäppli picks them up every five minutes.
         </p>
         <p className="mt-2">
-          <span className="font-medium text-ink">What Schnäppli reads:</span> only mails from ricardo.ch and tutti.ch. It opens the mailbox
+          <span className="font-medium text-ink">What Schnäppli reads:</span> only mails from ricardo.ch, tutti.ch, toppreise.ch and Facebook's notification address (and of those only the Marketplace
+          listings). It opens the mailbox
           read-only: nothing is marked as read, moved or deleted. You can disconnect any time.
         </p>
       </div>
@@ -339,8 +340,7 @@ function AlertsStep({ s }: { s: SetupState }) {
   return (
     <div className="flex flex-col gap-3 text-sm">
       <p className="max-w-prose text-[0.8125rem] leading-relaxed text-muted">
-        Open each one, sign in there and save the search with e-mail alerts on (Ricardo: “Suche speichern”, tutti: “Suchauftrag
-        speichern”). From then on, new listings show up in Schnäppli, scored. {s.alerts_arrived ? "" : "This step turns green with the first alert mail."}
+        Open each one, sign in there and save the search with e-mail alerts on. Ricardo: “Suche speichern”. tutti: “Suchauftrag speichern”. Facebook: “Suche speichern” and turn on e-mail for Marketplace under Settings → Notifications. Toppreise: open the product you want and tap the bell (price alert) with your e-mail. From then on, new listings show up in Schnäppli, scored. {s.alerts_arrived ? "" : "This step turns green with the first alert mail."}
       </p>
       {q.isLoading ? <Skeleton className="h-20" /> : (
         <ul className="divide-y divide-rule">
@@ -409,8 +409,8 @@ export default function Setup() {
     ? [
         { id: "ai", title: "Choose the AI", why: "Schnäppli uses it to understand your requests and judge each listing.", done: s.ai, body: <AIStep s={s} /> },
         { id: "location", title: "Your postal code", why: "For pickup distances.", done: s.location, body: <LocationStep s={s} /> },
-        { id: "mail", title: "Connect your mailbox for Ricardo and tutti", why: "Their alert mails are how their listings reach Schnäppli.", done: !!s.mail && s.mail.state === "ok", body: <MailStep /> },
-        { id: "alerts", title: "Save your searches on Ricardo and tutti", why: "One click per search, once.", done: s.alerts_arrived, body: <AlertsStep s={s} /> },
+        { id: "mail", title: "Connect your mailbox for Ricardo, tutti, Facebook and Toppreise", why: "Their alert mails are how their listings reach Schnäppli.", done: !!s.mail && s.mail.state === "ok", body: <MailStep /> },
+        { id: "alerts", title: "Save your searches there", why: "One click per search, once.", done: s.alerts_arrived, body: <AlertsStep s={s} /> },
         ...(s.telegram_configured ? [{ id: "telegram", title: "Telegram alerts", why: "Good deals reach your phone straight away.", done: s.telegram, optional: true, body: <Telegram /> }] : []),
         ...(s.is_admin ? [{ id: "ebay", title: "eBay for everyone", why: "A free developer key lets Schnäppli search eBay. Only you, the administrator, add it.", done: s.ebay.configured, optional: true, body: <EbayStep e={s.ebay} /> }] : []),
         {

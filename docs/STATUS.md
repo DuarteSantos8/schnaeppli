@@ -57,7 +57,8 @@ Last updated 2026-11-24 (v0.1.0). Legend: ✅ done and tested ·
 | Galaxus / Digitec (official MCP) | ✅ verified live 2026-11-24 |
 | Ricardo, tutti.ch (alert e-mails: own mailbox per user, or a shared one) | 🟡 implemented and tested with synthetic mails and a fake IMAP server; real alert layouts and real providers to verify |
 | Setup guide in the browser (/setup) | ✅ |
-| Facebook, Interdiscount, Toppreise | shown as unsupported with reasons |
+| Facebook Marketplace, Toppreise (alert / price-alert e-mails) | 🟡 implemented, tested with synthetic mails; real layouts to verify |
+| Interdiscount | shown as unsupported with reasons |
 | Amazon PA-API | ⬜ planned |
 
 ## Platform

@@ -67,7 +67,7 @@ function AlertLinks({ s }: { s: Search }) {
     return (
       <div className="mb-4">
         <Notice action={<Link to="/setup#mail"><Button size="sm">Connect</Button></Link>}>
-          Ricardo and tutti can feed this search through their own alert e-mails. Connect your mailbox once to get them.
+          Ricardo, tutti, Facebook and Toppreise can feed this search through their own alert e-mails. Connect your mailbox once to get them.
         </Notice>
       </div>
     );
@@ -77,9 +77,9 @@ function AlertLinks({ s }: { s: Search }) {
     <Panel className="mb-4 px-4 py-4 sm:px-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 max-w-prose">
-          <h2 className="text-[0.9375rem] font-semibold">Also watch Ricardo and tutti</h2>
+          <h2 className="text-[0.9375rem] font-semibold">Also watch Ricardo, tutti, Facebook and Toppreise</h2>
           <p className="mt-1 text-[0.8125rem] text-muted">
-            Open each search and save it there with e-mail alerts (Ricardo: “Suche speichern”, tutti: “Suchauftrag speichern”).
+            Open each search and save it there with e-mail alerts. Ricardo: “Suche speichern”. tutti: “Suchauftrag speichern”. Facebook: “Suche speichern” and turn on e-mail for Marketplace under Settings → Notifications. Toppreise: open the product you want and tap the bell (price alert) with your e-mail.
             {c
               ? <> Schnäppli reads the alerts from <span className="font-medium text-ink">{c.address}</span>, and new listings show up here, scored.</>
               : <> Their alert mails are forwarded to {inbox.data.address ? <span className="font-medium text-ink">{inbox.data.address}</span> : "Schnäppli's inbox"}, and new listings show up here, scored.</>}
