@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { emptySpec, FormActions, SearchForm, type SearchValues } from "@/components/SearchForm";
 import { Button, ErrorBox, Notice, PageHeader, Panel, Textarea, useToast } from "@/components/ui";
@@ -40,15 +40,23 @@ function toValues(i: Interpretation, currency: string): SearchValues {
   };
 }
 
+const DRAFT_KEY = "schnaeppli.new-search-draft";
+
 export default function NewSearch() {
   const me = useMe();
   const nav = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
+  // The draft survives leaving the page (and a slow AI answer arriving while you're elsewhere).
+  const saved = (() => { try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null"); } catch { return null; } })();
   const [text, setText] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [result, setResult] = useState<Interpretation | null>(null);
-  const [values, setValues] = useState<SearchValues | null>(null);
+  const [turns, setTurns] = useState<Turn[]>(saved?.turns ?? []);
+  const [result, setResult] = useState<Interpretation | null>(saved?.result ?? null);
+  const [values, setValues] = useState<SearchValues | null>(saved?.values ?? null);
+  useEffect(() => {
+    if (turns.length || result) sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ turns, result, values }));
+    else sessionStorage.removeItem(DRAFT_KEY);
+  }, [turns, result, values]);
   const [manual, setManual] = useState(false);
 
   const interpret = useMutation({
@@ -66,6 +74,7 @@ export default function NewSearch() {
     onSuccess: (s) => {
       qc.invalidateQueries({ queryKey: ["searches"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      sessionStorage.removeItem(DRAFT_KEY);
       toast.show("Search created. The first run has started.");
       nav(`/searches/${s.id}`);
     },
@@ -81,6 +90,9 @@ export default function NewSearch() {
     interpret.mutate(next);
   };
 
+  const submit = (v: SearchValues) =>
+    create.mutate({ ...v, spec: { ...v.spec, desired_products: v.spec.desired_products.filter((p) => p.name.trim()), alternatives: v.spec.alternatives.filter((p) => p.name.trim()) } });
+
   const noProvider = interpret.error instanceof ApiError && interpret.error.status === 409;
   const asking = result?.needs_clarification && result.questions.length > 0;
 
@@ -94,7 +106,8 @@ export default function NewSearch() {
       <>
         <PageHeader
           title={manual && !result ? "New search" : "Check what I understood"}
-          sub={manual && !result ? "Fill in what you're looking for." : "Change anything that's off. Nothing is saved until you confirm."}
+          sub={manual && !result ? "Fill in what you're looking for." : "Change anything that's off, then press Create search. Nothing is searched until then."}
+          actions={result ? <Button variant="primary" loading={create.isPending} disabled={!v.title.trim()} onClick={() => submit(v)}>Create search</Button> : undefined}
         />
         {result && (
           <Panel className="mb-6 px-4 py-4 sm:px-5">
@@ -125,6 +138,7 @@ export default function NewSearch() {
               setValues(null);
               setManual(false);
               setTurns([]);
+              sessionStorage.removeItem(DRAFT_KEY);
             }}
           >
             Start over
@@ -133,7 +147,7 @@ export default function NewSearch() {
             variant="primary"
             loading={create.isPending}
             disabled={!v.title.trim()}
-            onClick={() => create.mutate({ ...v, spec: { ...v.spec, desired_products: v.spec.desired_products.filter((p) => p.name.trim()), alternatives: v.spec.alternatives.filter((p) => p.name.trim()) } })}
+            onClick={() => submit(v)}
           >
             Create search
           </Button>
@@ -157,7 +171,7 @@ export default function NewSearch() {
                   : "max-w-[90%] rounded-[14px] rounded-bl-[4px] bg-surface px-4 py-3 text-[0.9375rem] whitespace-pre-line"
               }
             >
-              {t.role === "assistant" && <span className="mb-1 block text-[0.75rem] font-medium text-muted">A few questions</span>}
+              {t.role === "assistant" && <span className="mb-1 block text-[0.75rem] font-medium text-muted">A few questions before Schnäppli starts searching</span>}
               {t.content}
             </li>
           ))}
@@ -166,7 +180,7 @@ export default function NewSearch() {
 
       {interpret.isPending && (
         <p className="mb-4 flex items-center gap-2 text-sm text-muted" role="status">
-          <Sparkles className="size-4 animate-pulse" aria-hidden /> Thinking about your request…
+          <Sparkles className="size-4 animate-pulse" aria-hidden /> Reading your request… this can take up to a minute. You can leave the page; your draft stays.
         </p>
       )}
       {interpret.error && !noProvider ? <div className="mb-4"><ErrorBox error={interpret.error} onRetry={() => interpret.mutate(turns)} /></div> : null}
@@ -209,9 +223,10 @@ export default function NewSearch() {
         </div>
       </div>
       {asking && values && (
-        <button className="mt-3 text-[0.8125rem] text-muted underline underline-offset-2 hover:text-ink" onClick={() => setResult({ ...result!, needs_clarification: false })}>
-          Skip the questions and review what I have
-        </button>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button size="sm" onClick={() => setResult({ ...result!, needs_clarification: false })}>Skip the questions</Button>
+          <span className="text-[0.8125rem] text-muted">Nothing is searched yet. Answer above, or skip and check the search.</span>
+        </div>
       )}
 
       {turns.length === 0 && (

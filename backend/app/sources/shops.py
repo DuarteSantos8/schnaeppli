@@ -63,6 +63,8 @@ HANDLED = {
     "amazon.fr": "Amazon forbids automated access in its terms and blocks AI agents in robots.txt.",
     "amazon.it": "Amazon forbids automated access in its terms and blocks AI agents in robots.txt.",
     "facebook.com": "Meta's terms prohibit automated collection from Marketplace.",
+    "toppreise.ch": "Toppreise is a price comparison site and shows programs a bot check, which Schnäppli "
+    "doesn't get around. Add the shops it lists instead (their own search pages).",
 }
 
 STATE_TEXT = {
