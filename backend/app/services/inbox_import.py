@@ -13,10 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import utcnow
-from app.models import AppSetting, SearchProfile, User
+from app.core.security import secret_box
+from app.models import AppSetting, MailConnection, SearchProfile, User
 from app.services import listings as listing_svc
 from app.services.runner import queries_for
-from app.sources import inbox
+from app.sources import inbox, mailbox
 from app.sources.inbox import ParsedAlert
 
 log = structlog.get_logger()
@@ -98,6 +99,95 @@ def _sender_ok(raw_from: str) -> bool:
     return addr.endswith(("@ricardo.ch", ".ricardo.ch", "@tutti.ch", ".tutti.ch")) or addr in allowed
 
 
+async def _store(
+    db: AsyncSession, owner: User, alerts: list[ParsedAlert]
+) -> tuple[list[uuid.UUID], int, int, dict[str, int]]:
+    """Puts the listings of these alerts into the owner's matching searches."""
+    searches = (
+        await db.scalars(
+            select(SearchProfile).where(SearchProfile.user_id == owner.id, SearchProfile.status == "active")
+        )
+    ).all()
+    to_analyse: list[uuid.UUID] = []
+    imported = unrouted = 0
+    by_site: dict[str, int] = {}
+    for alert in alerts:
+        for raw in alert.listings:
+            targets = route(alert, raw.title, list(searches))
+            if not targets:
+                unrouted += 1
+                continue
+            listing, _new, previous = await listing_svc.upsert_listing(db, raw)
+            for search in targets:
+                match, created = await listing_svc.ensure_match(db, owner, search, listing, previous)
+                await db.flush()
+                if created:
+                    imported += 1
+                    by_site[raw.source] = by_site.get(raw.source, 0) + 1
+                    if match.analysis_state == "queued":
+                        to_analyse.append(match.id)
+    return to_analyse, imported, unrouted, by_site
+
+
+def account_for(conn: MailConnection) -> mailbox.Account:
+    password = secret_box().decrypt(conn.encrypted_password, f"mail:{conn.id}")
+    return mailbox.Account(conn.imap_host, conn.username, password, conn.imap_port, conn.folder)
+
+
+async def import_user_mail(db: AsyncSession, conn: MailConnection) -> list[uuid.UUID]:
+    """One user's own mailbox: new Ricardo / tutti alert mails → their searches."""
+    now = utcnow()
+    stats = dict(conn.stats or {})
+    try:
+        batch = await mailbox.fetch(account_for(conn), conn.uidvalidity, conn.last_uid)
+    except mailbox.MailboxError as e:
+        conn.state, conn.state_detail, conn.checked_at = e.kind, str(e)[:300], now
+        await db.commit()
+        return []
+    except Exception as e:  # network trouble, server quirks: try again next time
+        conn.state, conn.checked_at = "error", now
+        conn.state_detail = f"Couldn't read the mailbox ({type(e).__name__})."
+        await db.commit()
+        log.warning("mailbox_check_failed", error=type(e).__name__)
+        return []
+    owner = await db.get(User, conn.user_id)
+    to_analyse, imported, unrouted, by_site = (
+        await _store(db, owner, batch.alerts) if owner and owner.is_active else ([], 0, 0, {})
+    )
+    totals = dict(stats.get("totals", {}))
+    for k, v in by_site.items():
+        totals[k] = totals.get(k, 0) + v
+    names = list(stats.get("search_names", []))
+    for a in batch.alerts:
+        if a.search_name and a.search_name not in names:
+            names.append(a.search_name)
+    conn.stats = stats | {
+        "totals": totals,
+        "mails_total": stats.get("mails_total", 0) + len(batch.alerts),
+        "imported": imported,
+        "unrouted": unrouted,
+        "unreadable": batch.unreadable,
+        "search_names": names[-20:],
+    }
+    conn.uidvalidity, conn.last_uid = batch.uidvalidity, batch.last_uid
+    conn.state, conn.state_detail, conn.checked_at = "ok", None, now
+    if batch.alerts:
+        conn.last_alert_at = now
+    await db.commit()
+    if imported or unrouted:
+        log.info("mailbox_imported", imported=imported, unrouted=unrouted)
+    return to_analyse
+
+
+async def import_all(db: AsyncSession) -> list[uuid.UUID]:
+    """The administrator's shared inbox (if configured) and every connected user mailbox."""
+    ids = await import_alerts(db)
+    conns = (await db.scalars(select(MailConnection).where(MailConnection.enabled.is_(True)))).all()
+    for conn in conns:
+        ids += await import_user_mail(db, conn)
+    return ids
+
+
 async def import_alerts(db: AsyncSession) -> list[uuid.UUID]:
     """Reads new alert mails and returns the ids of new matches to analyse."""
     if not inbox.configured():
@@ -114,35 +204,9 @@ async def import_alerts(db: AsyncSession) -> list[uuid.UUID]:
         return []
 
     owner = await _owner(db)
-    searches = (
-        (
-            await db.scalars(
-                select(SearchProfile).where(
-                    SearchProfile.user_id == owner.id, SearchProfile.status == "active"
-                )
-            )
-        ).all()
-        if owner
-        else []
+    to_analyse, imported, unrouted, by_site = (
+        await _store(db, owner, batch.alerts) if owner else ([], 0, 0, {})
     )
-    to_analyse: list[uuid.UUID] = []
-    imported = unrouted = 0
-    by_site: dict[str, int] = {}
-    for alert in batch.alerts:
-        for raw in alert.listings:
-            targets = route(alert, raw.title, list(searches))
-            if not targets:
-                unrouted += 1
-                continue
-            listing, _new, previous = await listing_svc.upsert_listing(db, raw)
-            for search in targets:
-                match, created = await listing_svc.ensure_match(db, owner, search, listing, previous)
-                await db.flush()
-                if created:
-                    imported += 1
-                    by_site[raw.source] = by_site.get(raw.source, 0) + 1
-                    if match.analysis_state == "queued":
-                        to_analyse.append(match.id)
     totals = dict(st["totals"])
     for k, v in by_site.items():
         totals[k] = totals.get(k, 0) + v

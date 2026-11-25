@@ -17,26 +17,22 @@ function greeting() {
 
 function Setup({ d }: { d: Dashboard }) {
   const steps = [
-    { done: d.setup.ai_ready, label: "Add an AI provider key", hint: "Schnäppli needs it to understand requests and judge listings.", to: "/settings/ai" },
-    { done: d.setup.location_set, label: "Set your postal code", hint: "Used locally for pickup distances. Never sent to AI providers.", to: "/settings" },
-    {
-      done: d.setup.telegram_linked,
-      label: "Connect Telegram",
-      hint: d.setup.telegram_configured ? "For instant alerts and your daily digest." : "Your administrator needs to add a bot token first.",
-      to: "/settings/notifications",
-    },
-    {
-      done: d.setup.sources_ready.length > 0,
-      label: "Enable a marketplace",
-      hint: "eBay needs a free developer key on the server. Until then, add listings by link.",
-      to: "/settings/sources",
-    },
+    { done: d.setup.ai_ready, label: "Choose the AI", hint: "Schnäppli needs it to understand requests and judge listings.", to: "/setup#ai" },
+    { done: d.setup.location_set, label: "Set your postal code", hint: "Used locally for pickup distances. Never sent to AI providers.", to: "/setup#location" },
+    { done: d.setup.mail_connected, label: "Connect your mailbox for Ricardo and tutti", hint: "Their alert mails bring their listings in. Read-only, only their mails.", to: "/setup#mail" },
+    ...(d.setup.telegram_configured
+      ? [{ done: d.setup.telegram_linked, label: "Connect Telegram", hint: "For instant alerts and your daily digest.", to: "/setup#telegram" }]
+      : []),
   ];
   const open = steps.filter((s) => !s.done);
   if (open.length === 0) return null;
   return (
     <Panel className="mb-6">
-      <PanelHeader title="Finish setting up" sub={`${steps.length - open.length} of ${steps.length} done`} />
+      <PanelHeader
+        title="Finish setting up"
+        sub={`${steps.length - open.length} of ${steps.length} done`}
+        action={<Link to="/setup"><Button size="sm">Open the guide</Button></Link>}
+      />
       <ul className="px-2 pb-2">
         {steps.map((s) => (
           <li key={s.label}>

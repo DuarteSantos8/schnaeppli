@@ -26,6 +26,7 @@ from app.models import (
     ChatThread,
     Invite,
     Listing,
+    MailConnection,
     Notification,
     SearchMatch,
     SearchProfile,
@@ -33,7 +34,7 @@ from app.models import (
     TelegramLink,
     User,
 )
-from app.services import assistant, notify, resilience, telegram
+from app.services import app_secrets, assistant, notify, resilience, telegram
 from app.services.digest import send_digest
 from app.sources.registry import all_sources
 
@@ -234,10 +235,18 @@ async def inbox_info(user: User = Depends(current_user), db: AsyncSession = Depe
 
 
 @router.get("/api/sources")
-async def sources(user: User = Depends(current_user)):
+async def sources(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    await app_secrets.refresh(db)
+    own_mail = await db.scalar(
+        select(MailConnection.id).where(MailConnection.user_id == user.id, MailConnection.enabled.is_(True))
+    )
     out = []
     for s in all_sources().values():
         st = s.status()
+        if own_mail and s.id in ("ricardo", "tutti") and st.state != "alerts":
+            st = type(st)(
+                "alerts", st.reason, alternatives="Read from the alert mails in your own mailbox (Setup)."
+            )
         out.append(
             {
                 "id": s.id,
@@ -270,6 +279,7 @@ async def sources(user: User = Depends(current_user)):
 async def dashboard(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
     me = await db.get(User, user.id)
     assert me
+    await app_secrets.refresh(db)
     since = utcnow() - timedelta(days=1)
     week = utcnow() - timedelta(days=7)
     active = await db.scalar(
@@ -377,6 +387,10 @@ async def dashboard(user: User = Depends(current_user), db: AsyncSession = Depen
             "telegram_configured": telegram.configured(),
             "location_set": me.lat is not None,
             "sources_ready": [s.id for s in all_sources().values() if s.status().available],
+            "mail_connected": bool(
+                await db.scalar(select(MailConnection.id).where(MailConnection.user_id == user.id))
+            ),
+            "ebay_ready": app_secrets.ebay_credentials() is not None,
         },
     }
 

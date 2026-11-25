@@ -7,7 +7,7 @@ import { Button, Confirm, cx, ErrorBox, Field, IconButton, Input, Notice, PageHe
 import { del, get, patch, post, put } from "@/lib/api";
 import { useAuth, useMe } from "@/lib/auth";
 import { money, relTime, usd } from "@/lib/format";
-import type { AILimits, InboxInfo, NotificationPrefs, Shop, ShopPreview, SourceInfo, User } from "@/lib/types";
+import type { AILimits, InboxInfo, MailConnection, NotificationPrefs, Shop, ShopPreview, SourceInfo, User } from "@/lib/types";
 import { Picker } from "@/components/Picker";
 import Appearance from "./Appearance";
 
@@ -116,7 +116,7 @@ function General() {
 }
 
 /* ------------------------------------------------------------ Notifications */
-function Telegram() {
+export function Telegram() {
   const qc = useQueryClient();
   const toast = useToast();
   const status = useQuery({
@@ -666,41 +666,43 @@ function ShopRow({ s, onTested }: { s: Shop; onTested: (r: { shop: Shop; preview
 function Inbox() {
   const me = useMe();
   const q = useQuery({ queryKey: ["inbox"], queryFn: () => get<InboxInfo>("/api/sources/inbox") });
+  const own = useQuery({ queryKey: ["setup-mail"], queryFn: () => get<{ connection: MailConnection | null }>("/api/setup/mail") });
   const i = q.data;
+  const c = own.data?.connection;
   return (
     <Row
       title="Ricardo and tutti"
-      description="Neither site lets programs search it. Both e-mail new listings for a saved search, so Schnäppli reads those mails from a mailbox of its own, every five minutes."
+      description="Neither site lets programs search it. Both e-mail new listings for a saved search, and Schnäppli reads those mails every five minutes."
     >
-      {!i ? <Skeleton className="h-24" /> : !i.configured ? (
-        <div className="text-sm">
-          <p className="font-medium">No mailbox set up yet.</p>
-          <p className="mt-1 text-muted">
-            {me.is_admin
-              ? "Create a mailbox only for Schnäppli (with an app password), then set SCHNAEPPLI_INBOX_IMAP_HOST, SCHNAEPPLI_INBOX_IMAP_USER and the secret inbox_password on the server. docs/marketplaces.md has the steps."
-              : "Your administrator can set one up."}
-          </p>
-        </div>
-      ) : (
-        <div className="text-sm">
-          <p>
-            Forward Ricardo and tutti alert mails to <span className="font-medium">{i.address}</span>. Easiest: a filter in your own mailbox
-            that forwards mails from ricardo.ch and tutti.ch there automatically.
-          </p>
-          <ol className="mt-3 list-decimal space-y-1 pl-5 text-muted">
-            <li>Set up that forwarding filter once.</li>
-            <li>On each search in Schnäppli, open the Ricardo and tutti links and save the search there.</li>
-            <li>New listings from the alerts appear in the search, scored like any other.</li>
-          </ol>
-          <dl className="num mt-4 grid grid-cols-2 gap-3 border-t border-rule pt-3 sm:grid-cols-4">
-            <div><dt className="text-[0.75rem] text-muted">Last check</dt><dd>{i.checked_at ? relTime(i.checked_at) : "Not yet"}</dd></div>
-            <div><dt className="text-[0.75rem] text-muted">Last alert</dt><dd>{i.last_alert_at ? relTime(i.last_alert_at) : "None yet"}</dd></div>
-            <div><dt className="text-[0.75rem] text-muted">From Ricardo</dt><dd>{i.totals.ricardo ?? 0}</dd></div>
-            <div><dt className="text-[0.75rem] text-muted">From tutti</dt><dd>{i.totals.tutti ?? 0}</dd></div>
-          </dl>
-          {i.ok === false && <p className="mt-3 text-negative">The mailbox couldn't be read{i.error ? `: ${i.error}` : "."}</p>}
-          {i.unreadable > 0 && <p className="mt-2 text-warning">{i.unreadable} alert mail(s) in the last check had listing links Schnäppli couldn't read. The mail layout may have changed.</p>}
-          {i.unrouted > 0 && <p className="mt-2 text-muted">{i.unrouted} listing(s) in the last check didn't fit any active search and were skipped.</p>}
+      {!i || !own.data ? <Skeleton className="h-24" /> : (
+        <div className="flex flex-col gap-4 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium">{c ? c.address : "Your mailbox isn't connected"}</p>
+              <p className="text-[0.8125rem] text-muted">
+                {c
+                  ? `${c.state === "ok" ? "Working" : "Needs attention"} · ${(c.totals.ricardo ?? 0) + (c.totals.tutti ?? 0)} listings so far${c.last_alert_at ? ` · last alert ${relTime(c.last_alert_at)}` : ""}`
+                  : "Connect the mailbox Ricardo and tutti write to. Read-only, only their mails."}
+              </p>
+            </div>
+            <NavLink to="/setup#mail"><Button size="sm" variant={c ? "secondary" : "primary"}>{c ? "Manage" : "Connect"}</Button></NavLink>
+          </div>
+          {i.configured && (
+            <div className="border-t border-rule pt-3">
+              <p>
+                Shared mailbox: alert mails forwarded to <span className="font-medium">{i.address}</span> also arrive
+                {me.is_admin ? " (they go to the account set as inbox owner)" : ""}.
+              </p>
+              <dl className="num mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div><dt className="text-[0.75rem] text-muted">Last check</dt><dd>{i.checked_at ? relTime(i.checked_at) : "Not yet"}</dd></div>
+                <div><dt className="text-[0.75rem] text-muted">Last alert</dt><dd>{i.last_alert_at ? relTime(i.last_alert_at) : "None yet"}</dd></div>
+                <div><dt className="text-[0.75rem] text-muted">From Ricardo</dt><dd>{i.totals.ricardo ?? 0}</dd></div>
+                <div><dt className="text-[0.75rem] text-muted">From tutti</dt><dd>{i.totals.tutti ?? 0}</dd></div>
+              </dl>
+              {i.ok === false && <p className="mt-3 text-negative">The shared mailbox couldn't be read{i.error ? `: ${i.error}` : "."}</p>}
+              {i.unreadable > 0 && <p className="mt-2 text-warning">{i.unreadable} alert mail(s) in the last check had listing links Schnäppli couldn't read. The mail layout may have changed.</p>}
+            </div>
+          )}
         </div>
       )}
     </Row>

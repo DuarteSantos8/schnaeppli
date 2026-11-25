@@ -15,6 +15,7 @@ from decimal import Decimal, InvalidOperation
 import httpx
 
 from app.core.config import get_settings
+from app.services import app_secrets
 from app.sources.base import RawListing, SearchQuery, SourceAdapter, SourceError, SourceStatus
 
 SCOPE = "https://api.ebay.com/oauth/api_scope"
@@ -62,23 +63,30 @@ class EbayAdapter(SourceAdapter):
         self.base = HOSTS.get(s.ebay_environment, HOSTS["production"])
 
     def status(self) -> SourceStatus:
-        s = get_settings()
-        if not (s.ebay_client_id and s.ebay_client_secret):
+        if not app_secrets.ebay_credentials():
             return SourceStatus(
                 "needs_credentials",
-                "Official eBay Browse API. The administrator needs to add an eBay developer "
-                "application key (free) to the server configuration.",
+                "Official eBay Browse API. Needs a free eBay developer key, added once by the "
+                "administrator under Setup.",
                 docs="docs/marketplaces.md#ebay",
             )
         return SourceStatus(
             "ready", f"Official eBay Browse API ({self.marketplace}). Asking prices, not sold prices."
         )
 
+    _token_for: str | None = None
+
     async def _get_token(self, client: httpx.AsyncClient) -> str:
-        if EbayAdapter._token and time.time() < EbayAdapter._token_exp - 120:
+        creds = app_secrets.ebay_credentials()
+        if not creds:
+            raise SourceError("eBay isn't set up.", retryable=False)
+        if (
+            EbayAdapter._token
+            and EbayAdapter._token_for == creds[0]
+            and time.time() < EbayAdapter._token_exp - 120
+        ):
             return EbayAdapter._token
-        s = get_settings()
-        basic = base64.b64encode(f"{s.ebay_client_id}:{s.ebay_client_secret}".encode()).decode()
+        basic = base64.b64encode(f"{creds[0]}:{creds[1]}".encode()).decode()
         resp = await client.post(
             f"{self.base}/identity/v1/oauth2/token",
             headers={"Authorization": f"Basic {basic}", "Content-Type": "application/x-www-form-urlencoded"},
@@ -88,7 +96,7 @@ class EbayAdapter(SourceAdapter):
             raise SourceError("eBay rejected the application credentials.", retryable=False)
         resp.raise_for_status()
         data = resp.json()
-        EbayAdapter._token = data["access_token"]
+        EbayAdapter._token, EbayAdapter._token_for = data["access_token"], creds[0]
         EbayAdapter._token_exp = time.time() + int(data.get("expires_in", 7200))
         return EbayAdapter._token
 

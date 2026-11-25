@@ -22,6 +22,7 @@ const pages = {
   Budget: () => import("./pages/Budget"),
   Usage: () => import("./pages/Usage"),
   Settings: () => import("./pages/Settings"),
+  Setup: () => import("./pages/Setup"),
 };
 const Home = lazy(pages.Home);
 const Deals = lazy(pages.Deals);
@@ -34,6 +35,7 @@ const Assistant = lazy(pages.Assistant);
 const Budget = lazy(pages.Budget);
 const Usage = lazy(pages.Usage);
 const SettingsPage = lazy(pages.Settings);
+const SetupPage = lazy(pages.Setup);
 
 registerSW({ immediate: true });
 
@@ -81,6 +83,7 @@ function Gate() {
           <Route path="assistant/:threadId" element={<Assistant />} />
           <Route path="budget" element={<Budget />} />
           <Route path="usage" element={<Usage />} />
+          <Route path="setup" element={<SetupPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/:tab" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

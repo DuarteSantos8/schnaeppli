@@ -26,7 +26,6 @@ from app.models import SearchMatch, SearchProfile, User
 from app.services import analysis, digest, inbox_import, notify, resilience, telegram
 from app.services.runner import run_search
 from app.services.schedule import digest_due, next_search_run
-from app.sources import inbox
 
 log = structlog.get_logger()
 
@@ -70,7 +69,7 @@ async def digest_job(ctx, user_id: str, slot: str) -> str:
 async def inbox_job(ctx) -> int:
     """Ricardo / tutti alert mails → matches → analysis."""
     async with sessionmaker()() as db:
-        ids = await inbox_import.import_alerts(db)
+        ids = await inbox_import.import_all(db)
     for mid in ids:
         await ctx["redis"].enqueue_job("analyze_match_job", str(mid), _job_id=f"analyze:{mid}")
     return len(ids)
@@ -124,7 +123,7 @@ async def tick(ctx) -> None:
                     "digest_job", str(u.id), slot, _job_id=f"digest:{u.id}:{now:%Y%m%d}:{slot}"
                 )
         # Alert mails from Ricardo / tutti, every 5 minutes.
-        if inbox.configured() and now.minute % 5 == 0:
+        if now.minute % 5 == 0:
             await ctx["redis"].enqueue_job("inbox_job", _job_id=f"inbox:{now:%Y%m%d%H%M}")
         # Re-queue analyses stuck in "queued" for over an hour (e.g. after a crash).
         stale = (

@@ -320,7 +320,7 @@ export interface Dashboard {
   recent_runs: { search: string; status: string; started_at: string; new_matches: number; fetched: number; error: string | null }[];
   next_run_at: string | null;
   ai_budget: BudgetStatus;
-  setup: { ai_ready: boolean; telegram_linked: boolean; telegram_configured: boolean; location_set: boolean; sources_ready: string[] };
+  setup: { ai_ready: boolean; telegram_linked: boolean; telegram_configured: boolean; location_set: boolean; sources_ready: string[]; mail_connected: boolean; ebay_ready: boolean };
 }
 
 export interface BudgetStatus {
@@ -331,4 +331,55 @@ export interface BudgetStatus {
   warn_pct: number;
   pause_pct: number;
   paused_reason: string | null;
+}
+
+export interface MailProvider {
+  id: string;
+  name: string;
+  host: string | null;
+  domains: string[];
+  password_name: string;
+  help_url: string | null;
+  steps: string[];
+  supported: boolean;
+  unsupported_text: string | null;
+}
+
+export interface MailConnection {
+  provider: string;
+  provider_name: string;
+  address: string;
+  host: string;
+  folder: string;
+  enabled: boolean;
+  state: "ok" | "error" | "login" | "untested";
+  state_detail: string | null;
+  checked_at: string | null;
+  last_alert_at: string | null;
+  totals: Record<string, number>;
+  mails_total: number;
+  unrouted: number;
+  unreadable: number;
+  search_names: string[];
+}
+
+export interface EbayState {
+  configured: boolean;
+  from_config: boolean;
+  client_id_hint: string | null;
+}
+
+export interface SetupState {
+  is_admin: boolean;
+  ai: boolean;
+  claude_code_available: boolean;
+  location: boolean;
+  mail: MailConnection | null;
+  shared_inbox: boolean;
+  alerts_arrived: boolean;
+  search: boolean;
+  telegram_configured: boolean;
+  telegram: boolean;
+  ebay: EbayState;
+  shops: boolean;
 }

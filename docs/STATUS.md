@@ -55,7 +55,8 @@ Last updated 2026-11-24 (v0.1.0). Legend: ✅ done and tested ·
 | Add by link (JSON-LD/OpenGraph, robots.txt) | ✅ parser tested; live sites vary |
 | Your own shops (schema.org / WooCommerce, robots.txt) | ✅ implemented + tests; most big CH retailers close search to programs |
 | Galaxus / Digitec (official MCP) | ✅ verified live 2026-11-24 |
-| Ricardo, tutti.ch (inbox adapter for alert e-mails) | 🟡 implemented and tested with synthetic mails; real alert layouts to verify |
+| Ricardo, tutti.ch (alert e-mails: own mailbox per user, or a shared one) | 🟡 implemented and tested with synthetic mails and a fake IMAP server; real alert layouts and real providers to verify |
+| Setup guide in the browser (/setup) | ✅ |
 | Facebook, Interdiscount, Toppreise | shown as unsupported with reasons |
 | Amazon PA-API | ⬜ planned |
 

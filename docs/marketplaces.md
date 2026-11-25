@@ -57,6 +57,24 @@ search that e-mails new listings. Schnäppli reads those mails from a mailbox of
 own over IMAP, every five minutes, takes the listings out (link, title, price,
 photo) and puts them into the matching search. It doesn't open the listing pages.
 
+**Easiest: each user connects their own mailbox** under **Setup** (`/setup`, also
+linked from Home). Enter the address Ricardo / tutti write to, create an app password
+with the provider (the guide links the right page for Gmail, iCloud, Yahoo, GMX,
+WEB.DE, bluewin and Zoho), paste it, done. Schnäppli then:
+
+- asks the mail server only for mails from ricardo.ch and tutti.ch, and checks the
+  sender again itself;
+- opens the folder read-only (IMAP EXAMINE, BODY.PEEK): nothing is marked, moved or
+  deleted; progress is kept as the highest UID seen;
+- stores the password AES-256-GCM encrypted, like AI keys; only IMAP over TLS (993)
+  to public addresses; sign-in attempts are rate-limited.
+
+Outlook.com/Hotmail (Microsoft allows only its own sign-in for other apps) and
+Proton Mail (needs its Bridge) can't be connected; the guide says so and suggests
+letting the alerts go to another address.
+
+**Alternative: one shared mailbox** for the whole instance.
+
 Setup (administrator, once):
 
 1. Create a mailbox only for Schnäppli, e.g. `schnaeppli@your-domain`, and an app

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import utcnow
 from app.models import SearchMatch, SearchProfile, SearchRun, User
+from app.services import app_secrets
 from app.services import listings as listing_svc
 from app.services.schedule import next_search_run
 from app.sources import shops
@@ -51,6 +52,7 @@ async def run_search(db: AsyncSession, search_id: uuid.UUID) -> tuple[SearchRun,
     db.add(run)
     await db.flush()
 
+    await app_secrets.refresh(db)  # an eBay key added in the browser since the last run
     sources = enabled_sources_for(search.sources)
     sources += [
         a

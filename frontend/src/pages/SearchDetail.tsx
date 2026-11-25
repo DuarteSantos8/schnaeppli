@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, Link2, Play } from "lucide-react";
+import { ArrowLeft, Link2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DealCard, DealGridSkeleton } from "@/components/deal";
@@ -7,9 +7,9 @@ import { FormActions, SearchForm, type SearchValues } from "@/components/SearchF
 import { Button, Chip, Empty, ErrorBox, Field, Input, Notice, Panel, Pill, Segmented, Sheet, Skeleton, useToast } from "@/components/ui";
 import { get, patch, post } from "@/lib/api";
 import { dayTime, money, relTime, SOURCE_NAME } from "@/lib/format";
-import type { Deal, DealDetail, InboxInfo, Search } from "@/lib/types";
+import type { Deal, DealDetail, InboxInfo, MailConnection, Search } from "@/lib/types";
+import { AlertButtons } from "@/components/alerts";
 import { SearchMenu, StatusPill } from "./Searches";
-import { useMe } from "@/lib/auth";
 
 interface Run {
   id: string;
@@ -57,17 +57,17 @@ function AddByLink({ searchId, open, onOpenChange }: { searchId: string; open: b
 
 /** The searches to save on Ricardo and tutti, so their alert mails reach Schnäppli. */
 function AlertLinks({ s }: { s: Search }) {
-  const me = useMe();
   const inbox = useQuery({ queryKey: ["inbox"], queryFn: () => get<InboxInfo>("/api/sources/inbox"), staleTime: 300_000 });
+  const own = useQuery({ queryKey: ["setup-mail"], queryFn: () => get<{ connection: MailConnection | null }>("/api/setup/mail"), staleTime: 300_000 });
   const key = `schnaeppli.alerts-done.${s.id}`;
   const [done, setDone] = useState(() => localStorage.getItem(key) === "1");
-  if (!inbox.data || done || s.status !== "active") return null;
-  if (!inbox.data.configured) {
-    if (!me.is_admin) return null;
+  if (!inbox.data || !own.data || done || s.status !== "active") return null;
+  const c = own.data.connection;
+  if (!c && !inbox.data.configured) {
     return (
       <div className="mb-4">
-        <Notice action={<Link to="/settings/sources"><Button size="sm">Set up</Button></Link>}>
-          Ricardo and tutti can feed this search through their own alert e-mails once Schnäppli has a mailbox for them.
+        <Notice action={<Link to="/setup#mail"><Button size="sm">Connect</Button></Link>}>
+          Ricardo and tutti can feed this search through their own alert e-mails. Connect your mailbox once to get them.
         </Notice>
       </div>
     );
@@ -79,8 +79,10 @@ function AlertLinks({ s }: { s: Search }) {
         <div className="min-w-0 max-w-prose">
           <h2 className="text-[0.9375rem] font-semibold">Also watch Ricardo and tutti</h2>
           <p className="mt-1 text-[0.8125rem] text-muted">
-            Open each search and save it there (Ricardo: “Suche speichern”, tutti: “Suchauftrag speichern”). Their alert
-            mails are forwarded to {inbox.data.address ? <span className="font-medium text-ink">{inbox.data.address}</span> : "Schnäppli's inbox"}, and new listings show up here, scored.
+            Open each search and save it there with e-mail alerts (Ricardo: “Suche speichern”, tutti: “Suchauftrag speichern”).
+            {c
+              ? <> Schnäppli reads the alerts from <span className="font-medium text-ink">{c.address}</span>, and new listings show up here, scored.</>
+              : <> Their alert mails are forwarded to {inbox.data.address ? <span className="font-medium text-ink">{inbox.data.address}</span> : "Schnäppli's inbox"}, and new listings show up here, scored.</>}
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={() => { localStorage.setItem(key, "1"); setDone(true); }}>Done</Button>
@@ -89,14 +91,7 @@ function AlertLinks({ s }: { s: Search }) {
         {terms.map((t) => (
           <li key={t} className="flex flex-wrap items-center justify-between gap-2 py-2">
             <span className="min-w-0 truncate text-sm">{t}</span>
-            <span className="flex gap-2">
-              <a className="pressable inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] bg-raised px-3 text-[0.8125rem] font-medium hover:bg-raised-hover" href={`https://www.ricardo.ch/de/s/${encodeURIComponent(t)}`} target="_blank" rel="noreferrer noopener">
-                Ricardo <ExternalLink className="size-3.5" aria-hidden />
-              </a>
-              <a className="pressable inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] bg-raised px-3 text-[0.8125rem] font-medium hover:bg-raised-hover" href={`https://www.tutti.ch/de/q/suche?query=${encodeURIComponent(t)}`} target="_blank" rel="noreferrer noopener">
-                tutti <ExternalLink className="size-3.5" aria-hidden />
-              </a>
-            </span>
+            <AlertButtons term={t} />
           </li>
         ))}
       </ul>

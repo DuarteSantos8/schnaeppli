@@ -4,7 +4,18 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, IdMixin, TimestampMixin, utcnow
@@ -247,3 +258,30 @@ class CustomShop(IdMixin, TimestampMixin, Base):
     checked_at: Mapped[datetime | None]
     paused_until: Mapped[datetime | None]
     found_total: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class MailConnection(IdMixin, TimestampMixin, Base):
+    """A user's own mailbox, read for Ricardo / tutti alert mails only (app/sources/mailbox.py).
+
+    Read-only: the folder is opened with EXAMINE and mails are fetched with BODY.PEEK,
+    so nothing in the mailbox changes. Progress is kept as the highest UID seen."""
+
+    __tablename__ = "mail_connections"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    provider: Mapped[str] = mapped_column(String(20))
+    username: Mapped[str] = mapped_column(String(320))
+    imap_host: Mapped[str] = mapped_column(String(255))
+    imap_port: Mapped[int] = mapped_column(Integer, default=993)
+    folder: Mapped[str] = mapped_column(String(120), default="INBOX")
+    encrypted_password: Mapped[str] = mapped_column(Text)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    uidvalidity: Mapped[int | None] = mapped_column(BigInteger)
+    last_uid: Mapped[int] = mapped_column(BigInteger, default=0)
+    state: Mapped[str] = mapped_column(String(12), default="untested")  # ok | error | login
+    state_detail: Mapped[str | None] = mapped_column(String(300))
+    checked_at: Mapped[datetime | None]
+    last_alert_at: Mapped[datetime | None]
+    stats: Mapped[dict] = mapped_column(default=dict)

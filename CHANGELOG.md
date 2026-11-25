@@ -13,6 +13,12 @@ First version.
   start page; which sections Home shows; the four phone tabs.
 - Own pickers instead of the platform's select wheels, with a filter for long lists.
 - API keys, setup tokens and invite codes no longer trigger password autofill.
+- Setup guide in the browser (`/setup`): AI, postal code, your mailbox for Ricardo
+  and tutti, saved searches with one-click links, Telegram, eBay key (admin), shops.
+  Each step tested on the spot.
+- Connect your own mailbox for Ricardo / tutti alerts: no extra mailbox or forwarding
+  filter. Read-only, only mails from ricardo.ch and tutti.ch, password encrypted.
+- eBay key entered by the administrator in the browser, checked with eBay before saving.
 - Your own shops (Settings → Sources): add a shop by its search address; it's tested on
   the spot and searched with every search, where robots.txt allows and the shop
   publishes product data.
