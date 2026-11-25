@@ -1,5 +1,5 @@
 import { ArrowDownRight, ImageOff, MapPin } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { img } from "@/lib/api";
 import { CONDITION_TEXT, LABEL_SHORT, money, relTime, SOURCE_NAME } from "@/lib/format";
@@ -123,16 +123,25 @@ export function Photo({
   className,
   width = 640,
   eager,
+  empty,
 }: {
   src?: string | null;
   alt: string;
   className?: string;
   width?: number;
   eager?: boolean;
+  /** Shown instead of the broken-image icon when there is no photo at all. */
+  empty?: ReactNode;
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const url = img(src, width);
+  if (!url && empty)
+    return (
+      <div className={cx("flex items-center justify-center bg-raised text-[0.8125rem] text-muted", className)} role="img" aria-label={alt}>
+        {empty}
+      </div>
+    );
   if (!url || failed) {
     return (
       <div className={cx("flex items-center justify-center bg-raised text-faint", className)} role="img" aria-label={alt}>

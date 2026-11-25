@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, ExternalLink } from "lucide-react";
+import { Check, ChevronDown, ExternalLink, Plus } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AlertButtons } from "@/components/alerts";
@@ -8,7 +8,7 @@ import { Button, Confirm, cx, ErrorBox, Field, Input, Notice, PageHeader, Pill, 
 import { del, get, patch, post, put } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { relTime } from "@/lib/format";
-import type { EbayState, MailConnection, MailProvider, Search, SetupState, User } from "@/lib/types";
+import type { EbayState, MailConnection, MailProvider, Search, SetupState, SourceInfo, User } from "@/lib/types";
 import { Telegram } from "./Settings";
 
 const secretProps = {
@@ -35,18 +35,19 @@ function useRefreshSetup() {
 function Step({
   id, n, title, why, done, optional, open, onToggle, children,
 }: {
-  id: string; n: number; title: string; why: string; done: boolean; optional?: boolean; open: boolean; onToggle: () => void; children: ReactNode;
+  id: string; n?: number; title: string; why: string; done: boolean; optional?: boolean; open: boolean; onToggle: () => void; children: ReactNode;
 }) {
   return (
     <li id={id} className="scroll-mt-20 border-t border-border first:border-t-0">
-      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-4 py-5 text-left">
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-4 py-4 text-left">
         <span
           className={cx(
             "num flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold",
             done ? "bg-ink text-on-ink" : "border-[1.5px] border-control text-muted",
+            n === undefined && "size-6",
           )}
         >
-          {done ? <Check className="size-4" strokeWidth={3} aria-hidden /> : n}
+          {done ? <Check className={n === undefined ? "size-3.5" : "size-4"} strokeWidth={3} aria-hidden /> : n}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2 text-[0.9375rem] font-semibold">
@@ -339,20 +340,27 @@ function AlertsStep({ s }: { s: SetupState }) {
     );
   return (
     <div className="flex flex-col gap-3 text-sm">
-      <p className="max-w-prose text-[0.8125rem] leading-relaxed text-muted">
-        Open each one, sign in there and save the search with e-mail alerts on. Ricardo: “Suche speichern”. tutti: “Suchauftrag speichern”. Facebook: “Suche speichern” and turn on e-mail for Marketplace under Settings → Notifications. Toppreise: open the product you want and tap the bell (price alert) with your e-mail. From then on, new listings show up in Schnäppli, scored. {s.alerts_arrived ? "" : "This step turns green with the first alert mail."}
-      </p>
+      <p className="text-[0.8125rem] text-muted">Open a site, sign in there once and save the search with e-mail alerts on. A tick shows which ones you opened.</p>
+      <ul className="grid gap-x-6 gap-y-1 text-[0.8125rem] text-muted sm:grid-cols-2">
+        <li><span className="font-medium text-ink">Ricardo</span> · “Suche speichern”</li>
+        <li><span className="font-medium text-ink">tutti</span> · “Suchauftrag speichern”</li>
+        <li><span className="font-medium text-ink">Facebook</span> · “Suche speichern”, e-mail on under Notifications</li>
+        <li><span className="font-medium text-ink">Toppreise</span> · open the product, tap the bell</li>
+      </ul>
       {q.isLoading ? <Skeleton className="h-20" /> : (
         <ul className="divide-y divide-rule">
-          {active.flatMap((x) => (x.spec.queries?.length ? x.spec.queries.slice(0, 2) : [x.title]).map((t) => (
-            <li key={`${x.id}:${t}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
-              <span className="min-w-0 truncate">{t}</span>
-              <AlertButtons term={t} />
-            </li>
-          )))}
+          {active.map((x) => {
+            const t = x.spec.queries?.[0] || x.title;
+            return (
+              <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                <span className="min-w-0 truncate font-medium">{t}</span>
+                <AlertButtons term={t} />
+              </li>
+            );
+          })}
         </ul>
       )}
-      {!s.mail && !s.shared_inbox && <p className="text-[0.8125rem] text-warning">Connect your mailbox first (step above), otherwise the alerts won't reach Schnäppli.</p>}
+      {s.alerts_arrived && <p className="text-[0.8125rem] text-positive">Alert mails are arriving.</p>}
     </div>
   );
 }
@@ -400,48 +408,86 @@ function EbayStep({ e }: { e: EbayState }) {
 }
 
 /* --------------------------------------------------------------------- page */
+function ReadyNow({ s }: { s: SetupState }) {
+  const sources = useQuery({ queryKey: ["sources"], queryFn: () => get<SourceInfo[]>("/api/sources"), staleTime: 60_000 });
+  const ready = (sources.data || []).filter((x) => x.state === "ready" || (x.state === "alerts" && s.mail?.state === "ok"));
+  return (
+    <section className="mb-8 rounded-[14px] border border-border bg-surface p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[1rem] font-semibold">{s.ai ? "Ready to go" : "Almost ready"}</h2>
+          <p className="mt-1 text-[0.8125rem] text-muted">
+            {s.ai ? "Create a search and Schnäppli starts right away in these places. Nothing else is needed." : "Choose the AI above, then Schnäppli searches these places for you right away."}
+          </p>
+        </div>
+        {s.ai && <Link to="/searches/new"><Button variant="primary" icon={<Plus className="size-4" aria-hidden />}>New search</Button></Link>}
+      </div>
+      <ul className="mt-4 flex flex-wrap gap-2">
+        {sources.isLoading && <Skeleton className="h-8 w-48" />}
+        {ready.map((x) => (
+          <li key={x.id} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-raised px-3 text-[0.8125rem] font-medium">
+            <Check className="size-3.5 text-positive" strokeWidth={3} aria-hidden />
+            {x.name}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function Setup() {
   const q = useQuery({ queryKey: ["setup"], queryFn: () => get<SetupState>("/api/setup"), refetchInterval: 30_000 });
   const { hash } = useLocation();
   const [open, setOpen] = useState<string | null>(hash ? hash.slice(1) : null);
   const s = q.data;
-  const steps = s
+  const mailOk = !!s?.mail && s.mail.state === "ok";
+  const extras = s
     ? [
-        { id: "ai", title: "Choose the AI", why: "Schnäppli uses it to understand your requests and judge each listing.", done: s.ai, body: <AIStep s={s} /> },
-        { id: "location", title: "Your postal code", why: "For pickup distances.", done: s.location, body: <LocationStep s={s} /> },
-        { id: "mail", title: "Connect your mailbox for Ricardo, tutti, Facebook and Toppreise", why: "Their alert mails are how their listings reach Schnäppli.", done: !!s.mail && s.mail.state === "ok", body: <MailStep /> },
-        { id: "alerts", title: "Save your searches there", why: "One click per search, once.", done: s.alerts_arrived, body: <AlertsStep s={s} /> },
-        ...(s.telegram_configured ? [{ id: "telegram", title: "Telegram alerts", why: "Good deals reach your phone straight away.", done: s.telegram, optional: true, body: <Telegram /> }] : []),
-        ...(s.is_admin ? [{ id: "ebay", title: "eBay for everyone", why: "A free developer key lets Schnäppli search eBay. Only you, the administrator, add it.", done: s.ebay.configured, optional: true, body: <EbayStep e={s.ebay} /> }] : []),
         {
-          id: "shops", title: "Your own shops", why: "Any shop that allows it, searched with every search.", done: s.shops, optional: true,
-          body: <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><p className="min-w-0 flex-1 text-muted">Paste a shop's search results address, and Schnäppli tests it on the spot.</p><Link to="/settings/sources"><Button>Add a shop</Button></Link></div>,
+          id: "mail",
+          title: "Ricardo, tutti, Facebook and Toppreise",
+          why: mailOk ? "Your mailbox is connected. Save your searches on those sites." : "Connect your mailbox once (about two minutes). Their alert mails bring the listings in.",
+          done: mailOk && s.alerts_arrived,
+          body: (
+            <div className="flex flex-col gap-6">
+              <MailStep />
+              {(mailOk || s.shared_inbox) && <AlertsStep s={s} />}
+            </div>
+          ),
         },
+        { id: "location", title: "Your postal code", why: "Shows how far away a pickup is.", done: s.location, body: <LocationStep s={s} /> },
+        ...(s.telegram_configured ? [{ id: "telegram", title: "Telegram", why: "Good deals reach your phone straight away.", done: s.telegram, body: <Telegram /> }] : []),
+        ...(s.is_admin && !s.ebay.configured ? [{ id: "ebay", title: "eBay for everyone", why: "A free developer key. Only you, the administrator, add it once.", done: false, body: <EbayStep e={s.ebay} /> }] : []),
       ]
     : [];
-  const firstOpen = steps.find((x) => !x.done)?.id ?? null;
-  const current = open === null ? firstOpen : open;
-  const done = steps.filter((x) => x.done).length;
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
   }, [hash, s === undefined]);
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Set up Schnäppli" sub={s ? `${done} of ${steps.length} done · each step takes a minute or two` : undefined} />
+      <PageHeader title="Set up Schnäppli" sub={s ? (s.ai ? "You can start now. Everything below is optional." : "One step, then you can start.") : undefined} />
       {q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : !s ? <Skeleton className="h-96" /> : (
         <>
-          <div className="mb-6 h-1.5 overflow-hidden rounded-full bg-raised" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done}>
-            <div className="h-full rounded-full bg-ink transition-[width] duration-500" style={{ width: `${(done / steps.length) * 100}%` }} />
-          </div>
+          {!s.ai && (
+            <section id="ai" className="mb-6 scroll-mt-20">
+              <h2 className="mb-1 text-[1rem] font-semibold">Choose the AI</h2>
+              <p className="mb-3 text-[0.8125rem] text-muted">Schnäppli uses it to understand what you want and to judge each listing.</p>
+              <AIStep s={s} />
+            </section>
+          )}
+          <ReadyNow s={s} />
+          <h2 className="mb-1 text-[0.8125rem] font-medium text-muted">More, if you want it</h2>
           <ol>
-            {steps.map((x, i) => (
-              <Step key={x.id} id={x.id} n={i + 1} title={x.title} why={x.why} done={x.done} optional={"optional" in x && x.optional}
-                open={current === x.id} onToggle={() => setOpen(current === x.id ? "" : x.id)}>
+            {extras.map((x) => (
+              <Step key={x.id} id={x.id} title={x.title} why={x.why} done={x.done}
+                open={open === x.id} onToggle={() => setOpen(open === x.id ? null : x.id)}>
                 {x.body}
               </Step>
             ))}
           </ol>
-          {done === steps.length && <Notice tone="positive">All set. Schnäppli is searching for you.</Notice>}
+          <p className="mt-6 text-[0.8125rem] text-muted">
+            Your own shops, AI keys and everything else live in <Link to="/settings" className="underline decoration-control underline-offset-2 hover:text-ink">Settings</Link>.
+          </p>
         </>
       )}
     </div>

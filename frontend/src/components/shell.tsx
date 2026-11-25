@@ -12,6 +12,9 @@ import {
   Plus,
   Search as SearchIcon,
   Settings,
+  Sparkles,
+  Tag,
+  Wrench,
 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -59,7 +62,7 @@ function Sidebar({ onSearch }: { onSearch: () => void }) {
   const searches = useSearches();
   const active = (searches.data || []).filter((s) => s.status === "active").slice(0, 6);
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col px-3 pt-4 pb-3 lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-border bg-side px-3 pt-4 pb-3 lg:flex">
       <div className="flex items-center gap-2 px-2 pb-4">
         <Mark />
         <Wordmark height={20} />
@@ -70,7 +73,7 @@ function Sidebar({ onSearch }: { onSearch: () => void }) {
       >
         <SearchIcon className="size-4" aria-hidden />
         <span className="flex-1">Search</span>
-        <kbd className="rounded bg-raised px-1.5 text-[0.6875rem] font-medium text-muted">⌘K</kbd>
+        <kbd className="rounded bg-sunk px-1.5 text-[0.6875rem] font-medium text-muted">⌘K</kbd>
       </button>
       <nav aria-label="Main" className="flex flex-col gap-0.5">
         {NAV.map((n) => (
@@ -81,7 +84,7 @@ function Sidebar({ onSearch }: { onSearch: () => void }) {
             className={({ isActive }) =>
               cx(
                 "pressable flex h-8 items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-sm",
-                isActive ? "bg-raised font-medium text-ink" : "text-ink-2 hover:bg-sunk hover:text-ink",
+                isActive ? "bg-side-active font-medium text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)]" : "text-ink-2 hover:bg-side-hover hover:text-ink",
               )
             }
           >
@@ -93,7 +96,7 @@ function Sidebar({ onSearch }: { onSearch: () => void }) {
 
       <div className="mt-6 flex items-center justify-between px-2 pb-1">
         <span className="text-[0.75rem] text-muted">Active searches</span>
-        <NavLink to="/searches/new" aria-label="New search" className="rounded p-0.5 text-muted hover:bg-sunk hover:text-ink">
+        <NavLink to="/searches/new" aria-label="New search" className="rounded p-0.5 text-muted hover:bg-side-hover hover:text-ink">
           <Plus className="size-3.5" aria-hidden />
         </NavLink>
       </div>
@@ -110,7 +113,7 @@ function Sidebar({ onSearch }: { onSearch: () => void }) {
             className={({ isActive }) =>
               cx(
                 "flex h-8 items-center justify-between gap-2 rounded-[var(--radius-control)] px-2 text-[0.8125rem]",
-                isActive ? "bg-raised text-ink" : "text-ink-2 hover:bg-sunk hover:text-ink",
+                isActive ? "bg-side-active text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)]" : "text-ink-2 hover:bg-side-hover hover:text-ink",
               )
             }
           >
@@ -126,7 +129,7 @@ function Sidebar({ onSearch }: { onSearch: () => void }) {
           className={({ isActive }) =>
             cx(
               "flex h-10 items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-sm",
-              isActive ? "bg-raised" : "hover:bg-sunk",
+              isActive ? "bg-side-active" : "hover:bg-side-hover",
             )
           }
         >
@@ -260,20 +263,32 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
 
   const items = useMemo(() => {
     const t = q.trim().toLowerCase();
-    const out: { key: string; label: string; hint: string; go: () => void }[] = [];
-    out.push({ key: "new", label: "New search", hint: "Describe what you want", go: () => nav("/searches/new") });
-    for (const n of [...NAV, { to: "/settings", label: "Settings" }]) out.push({ key: n.to, label: n.label, hint: "Go to", go: () => nav(n.to) });
-    for (const s of searches.data || []) out.push({ key: s.id, label: s.title, hint: "Search", go: () => nav(`/searches/${s.id}`) });
-    const filtered = t ? out.filter((o) => o.label.toLowerCase().includes(t)) : out.slice(0, 9);
+    type Item = { key: string; group: string; label: string; hint: string; icon: typeof Home; go: () => void };
+    const out: Item[] = [];
+    out.push({ key: "new", group: "Actions", label: "New search", hint: "Describe what you want", icon: Plus, go: () => nav("/searches/new") });
+    out.push({ key: "setup", group: "Actions", label: "Setup guide", hint: "Sources and alerts", icon: Wrench, go: () => nav("/setup") });
+    for (const s of searches.data || []) out.push({ key: s.id, group: "Your searches", label: s.title, hint: s.status === "active" ? "Active" : s.status === "paused" ? "Paused" : "Done", icon: Sparkles, go: () => nav(`/searches/${s.id}`) });
+    for (const n of [...NAV, { to: "/settings", label: "Settings", icon: Settings }]) out.push({ key: n.to, group: "Go to", label: n.label, hint: "", icon: n.icon, go: () => nav(n.to) });
+    // Without a query: actions, the first few searches, then the screens.
+    const filtered = t
+      ? out.filter((o) => o.label.toLowerCase().includes(t))
+      : [...out.filter((o) => o.group === "Actions"), ...out.filter((o) => o.group === "Your searches").slice(0, 4), ...out.filter((o) => o.group === "Go to")];
     for (const d of deals.data || [])
       filtered.push({
         key: d.id,
+        group: "Deals",
         label: d.listing.title,
-        hint: `${money(d.effective_price, d.listing.currency)} · score ${d.deal_score ?? "–"}`,
+        hint: `${money(d.effective_price, d.listing.currency)}${d.deal_score != null ? ` · ${d.deal_score}` : ""}`,
+        icon: Tag,
         go: () => nav(`/deals/${d.id}`),
       });
-    return filtered.slice(0, 14);
+    return filtered.slice(0, 16);
   }, [q, searches.data, deals.data, nav]);
+
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [idx]);
 
   const run = (i: number) => {
     items[i]?.go();
@@ -289,11 +304,11 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
             e.preventDefault();
             inputRef.current?.focus();
           }}
-          className="fixed top-[max(12px,var(--safe-top))] left-1/2 z-50 w-[calc(100vw-24px)] max-w-[560px] -translate-x-1/2 overflow-hidden rounded-[12px] bg-surface shadow-[0_24px_70px_rgba(0,0,0,0.22)] outline-none sm:top-[14vh]"
+          className="palette fixed top-[max(12px,var(--safe-top))] left-1/2 z-50 flex max-h-[min(560px,80dvh)] w-[calc(100vw-24px)] max-w-[600px] -translate-x-1/2 flex-col overflow-hidden rounded-[14px] border border-border bg-surface shadow-[0_24px_70px_rgba(0,0,0,0.22)] outline-none sm:top-[12vh]"
         >
           <Dialog.Title className="sr-only">Search Schnäppli</Dialog.Title>
-          <div className="flex items-center gap-2 border-b border-rule px-4">
-            <SearchIcon className="size-4 text-muted" aria-hidden />
+          <div className="flex shrink-0 items-center gap-3 border-b border-rule px-4">
+            <SearchIcon className="size-[18px] text-muted" aria-hidden />
             <input
               ref={inputRef}
               value={q}
@@ -315,28 +330,45 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
               }}
               placeholder="Search screens, searches and deals"
               aria-label="Search"
-              className="h-12 flex-1 bg-transparent text-[0.9375rem] outline-none placeholder:text-faint"
+              className="h-14 min-w-0 flex-1 bg-transparent text-[1rem] outline-none placeholder:text-faint"
             />
+            <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[0.6875rem] text-muted sm:block">esc</kbd>
           </div>
-          <ul role="listbox" aria-label="Results" className="max-h-[60dvh] overflow-y-auto p-1.5">
-            {items.length === 0 && <li className="px-3 py-6 text-sm text-muted">Nothing found.</li>}
+          <ul ref={listRef} role="listbox" aria-label="Results" className="min-h-0 flex-1 overflow-y-auto p-2">
+            {items.length === 0 && (
+              <li className="px-3 py-8 text-center text-sm text-muted">
+                {q.trim().length >= 2 && deals.isFetching ? "Searching deals…" : "Nothing found."}
+              </li>
+            )}
             {items.map((it, i) => (
-              <li
-                key={it.key}
-                role="option"
-                aria-selected={i === idx}
-                onMouseEnter={() => setIdx(i)}
-                onClick={() => run(i)}
-                className={cx(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-2.5 text-sm",
-                  i === idx && "bg-sunk",
+              <li key={it.key} role="presentation">
+                {(i === 0 || items[i - 1].group !== it.group) && (
+                  <div className="px-3 pt-3 pb-1.5 text-[0.6875rem] font-medium tracking-wide text-faint uppercase first:pt-1">{it.group}</div>
                 )}
-              >
-                <span className="truncate">{it.label}</span>
-                <span className="num shrink-0 text-[0.75rem] text-muted">{it.hint}</span>
+                <div
+                  role="option"
+                  aria-selected={i === idx}
+                  onMouseMove={() => i !== idx && setIdx(i)}
+                  onClick={() => run(i)}
+                  className={cx(
+                    "flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2 text-sm",
+                    i === idx ? "bg-raised text-ink" : "text-ink-2",
+                  )}
+                >
+                  <span className={cx("flex size-7 shrink-0 items-center justify-center rounded-[8px]", i === idx ? "bg-surface text-ink" : "bg-sunk text-muted")}>
+                    <it.icon className="size-4" strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                  {it.hint && <span className="num shrink-0 text-[0.75rem] text-muted">{it.hint}</span>}
+                </div>
               </li>
             ))}
           </ul>
+          <div className="hidden shrink-0 items-center gap-4 border-t border-rule px-4 py-2 text-[0.75rem] text-muted sm:flex">
+            <span><kbd className="font-sans">↑↓</kbd> to move</span>
+            <span><kbd className="font-sans">↵</kbd> to open</span>
+            <span className="ml-auto">Type 2 letters to search your deals</span>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

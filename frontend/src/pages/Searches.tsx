@@ -138,7 +138,13 @@ export default function Searches() {
           {list.map((s) => (
             <article key={s.id} className="group relative">
               <Link to={`/searches/${s.id}`} className="pressable block">
-                <Photo src={s.stats.image} alt="" width={640} className="aspect-[16/10] w-full rounded-[var(--radius-card)]" />
+                <Photo
+                  src={s.stats.image}
+                  alt=""
+                  width={640}
+                  className="aspect-[16/10] w-full rounded-[var(--radius-card)]"
+                  empty={(s.stats.matches ?? 0) === 0 ? (s.status === "active" ? "Looking. Nothing found yet." : "No matches") : "No photo"}
+                />
                 <div className="mt-3 flex items-start justify-between gap-3 pr-10">
                   <div className="min-w-0">
                     <h2 className="truncate text-[1rem] font-semibold tracking-[-0.01em] group-hover:underline group-hover:decoration-control group-hover:underline-offset-2">{s.title}</h2>

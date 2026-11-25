@@ -20,6 +20,9 @@
   --color-raised: #ecebe8;
   --color-raised-hover: #e2e0dc;
   --color-sunk: #efeeeb;
+  --color-side: #e9e7e3;        /* the sidebar: one step darker than the page */
+  --color-side-hover: #e0ddd8;
+  --color-side-active: #ffffff;
   --color-border: #e4e2de;
   --color-rule: #eeece8;
   --color-control: #d3d0cb;
@@ -69,6 +72,9 @@
   --color-raised: #262624;
   --color-raised-hover: #302f2d;
   --color-sunk: #20201e;
+  --color-side: #0c0c0b;
+  --color-side-hover: #1c1c1b;
+  --color-side-active: #262624;
   --color-border: #2c2b29;
   --color-rule: #252523;
   --color-control: #45433f;
@@ -134,10 +140,14 @@ body {
 
 ::selection { background: var(--selection); }
 
-:focus-visible {
-  outline: 2px solid var(--color-score);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* In the base layer, so an element can opt out with Tailwind's outline-none
+   (text fields inside a framed box draw their own focus state). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-score);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .num { font-variant-numeric: tabular-nums; }

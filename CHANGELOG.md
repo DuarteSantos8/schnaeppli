@@ -7,6 +7,14 @@ once it reaches 1.0.
 
 First version.
 
+- Faster setup: only the AI is required. The setup page shows what already
+  searches without any setup (Galaxus, Digitec, eBay when configured) and puts
+  the mailbox route, postal code, Telegram and the eBay key under "More, if you
+  want it". The alert buttons remember which sites you already opened.
+- Sidebar has its own tone, separate from the page, in light and dark.
+- Search popup (⌘K) redone: grouped results with icons, key hints, no clipped
+  focus ring on the text field.
+
 - Name: Schnäppli (Swiss German for a real bargain), with the winking-ä logo.
 - Appearance settings: light, dark or system theme; five accents; larger text;
   compact spacing; reduce motion; photo cards or compact rows; photos on/off;

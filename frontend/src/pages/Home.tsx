@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DealCard, DealGridSkeleton, DealRow } from "@/components/deal";
@@ -16,42 +15,38 @@ function greeting() {
 }
 
 function Setup({ d }: { d: Dashboard }) {
-  const steps = [
-    { done: d.setup.ai_ready, label: "Choose the AI", hint: "Schnäppli needs it to understand requests and judge listings.", to: "/setup#ai" },
-    { done: d.setup.location_set, label: "Set your postal code", hint: "Used locally for pickup distances. Never sent to AI providers.", to: "/setup#location" },
-    { done: d.setup.mail_connected, label: "Connect your mailbox for Ricardo, tutti, Facebook and Toppreise", hint: "Their alert mails bring their listings in. Read-only, only their mails.", to: "/setup#mail" },
-    ...(d.setup.telegram_configured
-      ? [{ done: d.setup.telegram_linked, label: "Connect Telegram", hint: "For instant alerts and your daily digest.", to: "/setup#telegram" }]
-      : []),
-  ];
-  const open = steps.filter((s) => !s.done);
-  if (open.length === 0) return null;
+  const [hidden, setHidden] = useState(() => localStorage.getItem("schnaeppli.more-sources-hidden") === "1");
+  if (!d.setup.ai_ready)
+    return (
+      <Panel className="mb-6">
+        <Link to="/setup#ai" className="hover-lift flex items-center gap-4 rounded-[var(--radius-card)] p-4">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.9375rem] font-semibold">One step before you start: choose the AI</span>
+            <span className="block text-[0.8125rem] text-muted">Schnäppli needs it to understand what you want and to judge listings.</span>
+          </span>
+          <Button size="sm" variant="primary">Set up</Button>
+        </Link>
+      </Panel>
+    );
+  if (d.setup.mail_connected || hidden) return null;
   return (
-    <Panel className="mb-6">
-      <PanelHeader
-        title="Finish setting up"
-        sub={`${steps.length - open.length} of ${steps.length} done`}
-        action={<Link to="/setup"><Button size="sm">Open the guide</Button></Link>}
-      />
-      <ul className="px-2 pb-2">
-        {steps.map((s) => (
-          <li key={s.label}>
-            <Link to={s.to} className="hover-lift flex items-center gap-3 rounded-[var(--radius-control)] px-2 py-2.5">
-              <span
-                className={`flex size-5 shrink-0 items-center justify-center rounded-full ${s.done ? "bg-ink text-on-ink" : "border-[1.5px] border-control"}`}
-              >
-                {s.done && <Check className="size-3" strokeWidth={3} aria-hidden />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className={`block text-sm ${s.done ? "text-muted line-through" : "font-medium"}`}>{s.label}</span>
-                {!s.done && <span className="block text-[0.8125rem] text-muted">{s.hint}</span>}
-              </span>
-              {!s.done && <ChevronRight className="size-4 text-faint" aria-hidden />}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </Panel>
+    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-sm">
+      <p className="min-w-0 flex-1">
+        <span className="font-medium">Want Ricardo, tutti, Facebook and Toppreise too?</span>{" "}
+        <span className="text-muted">Optional, about two minutes.</span>
+      </p>
+      <Link to="/setup#mail"><Button size="sm">Add them</Button></Link>
+      <button
+        type="button"
+        className="text-[0.8125rem] text-muted hover:text-ink"
+        onClick={() => {
+          localStorage.setItem("schnaeppli.more-sources-hidden", "1");
+          setHidden(true);
+        }}
+      >
+        Not now
+      </button>
+    </div>
   );
 }
 
