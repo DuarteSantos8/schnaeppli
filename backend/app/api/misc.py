@@ -36,7 +36,7 @@ from app.models import (
 )
 from app.services import app_secrets, assistant, notify, resilience, telegram
 from app.services.digest import send_digest
-from app.sources.registry import all_sources
+from app.sources.registry import AlertSource, all_sources
 
 router = APIRouter(tags=["misc"])
 
@@ -243,7 +243,7 @@ async def sources(user: User = Depends(current_user), db: AsyncSession = Depends
     out = []
     for s in all_sources().values():
         st = s.status()
-        if own_mail and s.id in ("ricardo", "tutti") and st.state != "alerts":
+        if own_mail and isinstance(s, AlertSource) and st.state != "alerts":
             st = type(st)(
                 "alerts", st.reason, alternatives="Read from the alert mails in your own mailbox (Setup)."
             )
