@@ -37,6 +37,16 @@ ALERT_DOMAINS = ("ricardo.ch", "tutti.ch")
 
 
 @dataclass(frozen=True)
+class Guide:
+    """One step of the instructions: what to do, what you'll see, and a button to the page."""
+
+    title: str
+    detail: str = ""
+    link: str | None = None
+    link_label: str | None = None
+
+
+@dataclass(frozen=True)
 class Provider:
     id: str
     name: str
@@ -44,7 +54,8 @@ class Provider:
     domains: tuple[str, ...]
     password_name: str  # what the provider calls the password to use
     help_url: str | None
-    steps: tuple[str, ...]
+    steps: tuple[Guide, ...]
+    trouble: tuple[str, ...] = ()
     supported: bool = True
 
 
@@ -59,9 +70,33 @@ PROVIDERS: dict[str, Provider] = {
             "app password",
             "https://myaccount.google.com/apppasswords",
             (
-                "Turn on 2-Step Verification for your Google account, if it isn't on yet.",
-                "Open the app passwords page, name it “Schnäppli” and create it.",
-                "Copy the 16-letter password and paste it here.",
+                Guide(
+                    "Turn on 2-Step Verification",
+                    "Google only offers app passwords when 2-Step Verification is on. Open the page, sign in, "
+                    "press “Turn on 2-Step Verification” and follow it (your phone number, then the code Google "
+                    "texts you). If the page already says it's on, skip this step.",
+                    "https://myaccount.google.com/signinoptions/twosv",
+                    "Open 2-Step Verification",
+                ),
+                Guide(
+                    "Create the app password",
+                    "Open the next page (Google may ask for your password again). In the field “App name”, type "
+                    "Schnäppli and press “Create”.",
+                    "https://myaccount.google.com/apppasswords",
+                    "Open app passwords",
+                ),
+                Guide(
+                    "Copy the 16 letters",
+                    "Google shows a box with 16 letters in four groups, like “abcd efgh ijkl mnop”. Copy them "
+                    "(the spaces don't matter) and paste them into the field below. Google shows them only once; "
+                    "if you closed the box, just create a new one.",
+                ),
+            ),
+            (
+                "“The setting you are looking for is not available for your account”: 2-Step Verification "
+                "is still off (step 1), or it's a work or school account whose administrator turned app "
+                "passwords off.",
+                "Use your normal Gmail address above, not a second address.",
             ),
         ),
         Provider(
@@ -72,10 +107,23 @@ PROVIDERS: dict[str, Provider] = {
             "app-specific password",
             "https://account.apple.com/account/manage",
             (
-                "Sign in to your Apple Account and open Sign-In and Security → App-Specific Passwords.",
-                "Create one named “Schnäppli”.",
-                "Paste it here.",
+                Guide(
+                    "Open your Apple Account",
+                    "Sign in with your Apple ID, then open “Sign-In and Security”.",
+                    "https://account.apple.com/account/manage",
+                    "Open Apple Account",
+                ),
+                Guide(
+                    "Create an app-specific password",
+                    "Choose “App-Specific Passwords”, press “+” or “Generate”, type Schnäppli as the name and "
+                    "confirm with your Apple ID password.",
+                ),
+                Guide(
+                    "Copy it",
+                    "Apple shows a password like “abcd-efgh-ijkl-mnop”. Copy it into the field below.",
+                ),
             ),
+            ("App-specific passwords need two-factor authentication on your Apple ID (on by default).",),
         ),
         Provider(
             "yahoo",
@@ -84,7 +132,18 @@ PROVIDERS: dict[str, Provider] = {
             ("yahoo.com", "yahoo.de", "yahoo.fr", "ymail.com"),
             "app password",
             "https://login.yahoo.com/account/security",
-            ("Open Account security → Generate app password.", "Name it “Schnäppli” and paste it here."),
+            (
+                Guide(
+                    "Open Account security",
+                    "Sign in and scroll to “Generate app password” (or “Manage app passwords”).",
+                    "https://login.yahoo.com/account/security",
+                    "Open Yahoo security",
+                ),
+                Guide(
+                    "Create and copy it",
+                    "Type Schnäppli as the name, press “Generate password”, copy it into the field below.",
+                ),
+            ),
         ),
         Provider(
             "gmx",
@@ -94,8 +153,14 @@ PROVIDERS: dict[str, Provider] = {
             "password",
             "https://www.gmx.ch",
             (
-                "In GMX, open Settings → POP3/IMAP and allow access by other programs.",
-                "Use your normal GMX password (or an app password, if you set one up).",
+                Guide(
+                    "Allow access by programs",
+                    "Sign in to GMX, open “Einstellungen” (settings) → “POP3/IMAP Abruf”, tick “POP3 und IMAP "
+                    "Zugriff erlauben” and save.",
+                    "https://www.gmx.ch",
+                    "Open GMX",
+                ),
+                Guide("Use your GMX password", "Type your normal GMX password into the field below."),
             ),
         ),
         Provider(
@@ -105,7 +170,16 @@ PROVIDERS: dict[str, Provider] = {
             ("web.de",),
             "password",
             "https://web.de",
-            ("In WEB.DE, open Settings → POP3/IMAP and allow access.", "Use your WEB.DE password."),
+            (
+                Guide(
+                    "Allow access by programs",
+                    "Sign in to WEB.DE, open “Einstellungen” → “POP3/IMAP Abruf”, tick “POP3 und IMAP Zugriff "
+                    "erlauben” and save.",
+                    "https://web.de",
+                    "Open WEB.DE",
+                ),
+                Guide("Use your WEB.DE password", "Type your normal WEB.DE password into the field below."),
+            ),
         ),
         Provider(
             "bluewin",
@@ -114,7 +188,12 @@ PROVIDERS: dict[str, Provider] = {
             ("bluewin.ch", "bluemail.ch"),
             "password",
             None,
-            ("Use your bluewin e-mail password.",),
+            (
+                Guide(
+                    "Use your bluewin password",
+                    "Type the password of your bluewin e-mail into the field below.",
+                ),
+            ),
         ),
         Provider(
             "zoho",
@@ -124,8 +203,17 @@ PROVIDERS: dict[str, Provider] = {
             "app password",
             "https://accounts.zoho.eu/home#security/app_password",
             (
-                "Zoho's free plan has no IMAP; paid plans do. Turn on IMAP access in Mail settings.",
-                "Create an app password named “Schnäppli” and paste it here.",
+                Guide(
+                    "Turn on IMAP",
+                    "In Zoho Mail open Settings → Mail Accounts → IMAP and turn IMAP access on. Zoho's free "
+                    "plan has no IMAP.",
+                ),
+                Guide(
+                    "Create an app password",
+                    "Open the page, press “Generate New Password”, name it Schnäppli and copy it into the field below.",
+                    "https://accounts.zoho.eu/home#security/app_password",
+                    "Open Zoho security",
+                ),
             ),
         ),
         Provider(
@@ -155,7 +243,18 @@ PROVIDERS: dict[str, Provider] = {
             (),
             "password",
             None,
-            ("Ask your provider for its IMAP server and whether it needs an app password.",),
+            (
+                Guide(
+                    "Find the IMAP server",
+                    "Your provider's help pages list it (search for “IMAP settings”). Schnäppli uses port 993 "
+                    "with TLS.",
+                ),
+                Guide(
+                    "Password",
+                    "Many providers want an app password for other programs; their help pages say so. "
+                    "Otherwise use your normal password.",
+                ),
+            ),
         ),
     ]
 }
@@ -185,7 +284,11 @@ def provider_out(p: Provider) -> dict:
         "domains": list(p.domains),
         "password_name": p.password_name,
         "help_url": p.help_url,
-        "steps": list(p.steps),
+        "steps": [
+            {"title": g.title, "detail": g.detail, "link": g.link, "link_label": g.link_label}
+            for g in p.steps
+        ],
+        "trouble": list(p.trouble),
         "supported": p.supported,
         "unsupported_text": UNSUPPORTED_TEXT.get(p.id),
     }

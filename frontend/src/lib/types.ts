@@ -340,7 +340,8 @@ export interface MailProvider {
   domains: string[];
   password_name: string;
   help_url: string | null;
-  steps: string[];
+  steps: { title: string; detail: string; link: string | null; link_label: string | null }[];
+  trouble: string[];
   supported: boolean;
   unsupported_text: string | null;
 }

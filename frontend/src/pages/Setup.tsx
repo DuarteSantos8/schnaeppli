@@ -241,15 +241,33 @@ function MailForm({ providers, existing }: { providers: MailProvider[]; existing
       ) : (
         <>
           {p.steps.length > 0 && (
-            <div className="rounded-[12px] bg-surface p-4 text-sm">
-              <p className="font-medium">{p.password_name === "password" ? "Password" : `Create an ${p.password_name}`}</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
-                {p.steps.map((x) => <li key={x}>{x}</li>)}
+            <div className="rounded-[12px] bg-surface p-4 sm:p-5">
+              <p className="text-sm font-medium">
+                {p.password_name === "password" ? `${p.name}: what to do` : `${p.name} needs an ${p.password_name}. Here's how, takes two minutes:`}
+              </p>
+              <ol className="mt-4 flex flex-col gap-4">
+                {p.steps.map((g, i) => (
+                  <li key={g.title} className="flex gap-3">
+                    <span className="num flex size-6 shrink-0 items-center justify-center rounded-full bg-raised text-[0.75rem] font-semibold">{i + 1}</span>
+                    <div className="min-w-0 flex-1 text-sm">
+                      <p className="font-medium">{g.title}</p>
+                      {g.detail && <p className="mt-0.5 leading-relaxed text-muted">{g.detail}</p>}
+                      {g.link && (
+                        <a href={g.link} target="_blank" rel="noreferrer noopener" className="mt-2 inline-block">
+                          <Button size="sm" icon={<ExternalLink className="size-4" aria-hidden />}>{g.link_label || "Open"}</Button>
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
               </ol>
-              {p.help_url && (
-                <a href={p.help_url} target="_blank" rel="noreferrer noopener" className="mt-3 inline-block">
-                  <Button size="sm" icon={<ExternalLink className="size-4" aria-hidden />}>Open {p.name.split(" /")[0]}</Button>
-                </a>
+              {p.trouble.length > 0 && (
+                <details className="mt-4 border-t border-rule pt-3 text-[0.8125rem]">
+                  <summary className="cursor-pointer font-medium">Doesn't work?</summary>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
+                    {p.trouble.map((t) => <li key={t}>{t}</li>)}
+                  </ul>
+                </details>
               )}
             </div>
           )}
@@ -258,7 +276,11 @@ function MailForm({ providers, existing }: { providers: MailProvider[]; existing
               <Input id="mail-host" value={host} onChange={(e) => setHost(e.target.value.trim())} placeholder="imap.example.ch" />
             </Field>
           )}
-          <Field label={p.password_name ? p.password_name[0].toUpperCase() + p.password_name.slice(1) : "Password"} htmlFor="mail-pw">
+          <Field
+            label={`Paste the ${p.password_name || "password"} here`}
+            htmlFor="mail-pw"
+            hint={p.password_name && p.password_name !== "password" ? "Not your normal password." : undefined}
+          >
             <Input id="mail-pw" name="mailbox-app-secret" type="password" {...secretProps} value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <button type="button" className="self-start text-[0.8125rem] text-muted underline-offset-2 hover:underline" onClick={() => setMore(!more)}>
